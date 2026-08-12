@@ -1,0 +1,446 @@
+{
+  "title": "Ganeinu Academy - Kriah Reading Assessment",
+  "sourceSheet": "Copy of Kriah Assessment",
+  "generatedAt": "2026-08-12T19:17:22.548Z",
+  "categoryCount": 28,
+  "categories": [
+    {
+      "id": "c01-letters-3x",
+      "order": 1,
+      "name": "Letters (3x)",
+      "count": 78,
+      "words": [
+        "שׁ",
+        "צ",
+        "ז",
+        "שׂ",
+        "ם",
+        "ן",
+        "צ",
+        "ג",
+        "א",
+        "ו",
+        "ט",
+        "א",
+        "תּ",
+        "ץ",
+        "ד",
+        "ר",
+        "כּ",
+        "מ",
+        "ר",
+        "שׂ",
+        "ץ",
+        "בּ",
+        "ס",
+        "נ",
+        "כ",
+        "ק",
+        "ן",
+        "ב",
+        "שׂ",
+        "ם",
+        "ך",
+        "ו",
+        "ס",
+        "נ",
+        "שׁ",
+        "ק",
+        "ר",
+        "כ",
+        "צ",
+        "פּ",
+        "ה",
+        "ג",
+        "ח",
+        "ע",
+        "ת",
+        "ס",
+        "ה",
+        "ט",
+        "מ",
+        "כּ",
+        "נ",
+        "כ",
+        "ף",
+        "ע",
+        "ךּ",
+        "ז",
+        "ק",
+        "מ",
+        "ח",
+        "שׂ",
+        "בּ",
+        "פ",
+        "ל",
+        "תּ",
+        "ד",
+        "י",
+        "כּ",
+        "ע",
+        "תּ",
+        "ף",
+        "ץ",
+        "שׁ",
+        "פּ",
+        "ם",
+        "י",
+        "פ",
+        "ה",
+        "ךּ"
+      ]
+    },
+    {
+      "id": "c02-nekudot",
+      "order": 2,
+      "name": "Nekudot",
+      "count": 36,
+      "words": [
+        "אָ",
+        "אְ",
+        "אֶ",
+        "אַ",
+        "אִ",
+        "אוֹ",
+        "אֵ",
+        "אֳ‎",
+        "אֱ",
+        "אֶ",
+        "אוּ",
+        "אָ",
+        "אְ",
+        "אֻ",
+        "אֲ‎",
+        "אוֹ",
+        "אֶ",
+        "אַ",
+        "אִ",
+        "אֲ‎",
+        "אֳ‎",
+        "אֻ",
+        "אַ",
+        "אֵ",
+        "אוּ",
+        "אֱ",
+        "אְ",
+        "אֳ‎",
+        "אוֹ",
+        "אוּ",
+        "אֲ‎",
+        "אֵ",
+        "אִ",
+        "אֱ",
+        "אָ",
+        "אֻ"
+      ]
+    },
+    {
+      "id": "c03-basic-dotted-letters",
+      "order": 3,
+      "name": "Basic Dotted Letters",
+      "count": 24,
+      "words": [
+        "בָּנוּ",
+        "בְּשֵׁם",
+        "בְּךָ",
+        "אָבֶן",
+        "קֹבֵץ",
+        "יֶקֶב",
+        "כֶּסֶף",
+        "כֶּבֶשׂ",
+        "כּוֹרֶשׁ",
+        "כֵן",
+        "כַף",
+        "תֹּכֶן",
+        "פֶּן",
+        "פָּרַץ",
+        "פּוֹדֶה",
+        "אֹפֶה",
+        "סָפוּן",
+        "צְפֹן",
+        "שָׁכֵן",
+        "דֶשֶׁא",
+        "מֶשֶׁךְ",
+        "חָרֶשׂ",
+        "עֹשֶׂךָ",
+        "שֶׁעָשׂוּ"
+      ]
+    },
+    {
+      "id": "c04-silent-letters-alef",
+      "order": 4,
+      "name": "Silent Letters Alef",
+      "count": 3,
+      "words": [
+        "תֹאכַל",
+        "יֹאשִׁיָּהוּ",
+        "רֵאשִׁית"
+      ]
+    },
+    {
+      "id": "c05-silent-letters-yud",
+      "order": 5,
+      "name": "Silent Letters Yud",
+      "count": 3,
+      "words": [
+        "עָלֶיהָ",
+        "וִיהוּדָה",
+        "שְׁעָרִים"
+      ]
+    },
+    {
+      "id": "c06-silent-letters-vav",
+      "order": 6,
+      "name": "Silent Letters Vav",
+      "count": 1,
+      "words": [
+        "הִוא"
+      ]
+    },
+    {
+      "id": "c07-yud-vav-ending",
+      "order": 7,
+      "name": "Yud Vav Ending",
+      "count": 3,
+      "words": [
+        "שִׁנָּיו",
+        "עָלָיו",
+        "כַּפָּיו"
+      ]
+    },
+    {
+      "id": "c08-sheva-in-begining",
+      "order": 8,
+      "name": "Sheva in Begining",
+      "count": 3,
+      "words": [
+        "לְעוֹלָם",
+        "מְכוֹן",
+        "שְׂשׂוֹן"
+      ]
+    },
+    {
+      "id": "c09-sheva-in-middle",
+      "order": 9,
+      "name": "Sheva in middle",
+      "count": 3,
+      "words": [
+        "אֶזְבַּח",
+        "יִשְׁכּוֹן",
+        "וַתֵּלַדְןָ"
+      ]
+    },
+    {
+      "id": "c10-g2-sheva-in-middle-under",
+      "order": 10,
+      "name": "G2 Sheva in middle under א-ה-ע-י",
+      "count": 3,
+      "words": [
+        "תַּעְלִים",
+        "יִהְיֶה",
+        "לֶאְסֹר"
+      ]
+    },
+    {
+      "id": "c11-shva-in-end",
+      "order": 11,
+      "name": "Shva in end",
+      "count": 3,
+      "words": [
+        "מֶשֶׁךְ",
+        "לָקַחַתְּ",
+        "נֶהְפַּךְ"
+      ]
+    },
+    {
+      "id": "c12-2-shva-at-the-end",
+      "order": 12,
+      "name": "2 Shva at the end",
+      "count": 3,
+      "words": [
+        "תֵּשְׁתְּ",
+        "וְיֵרְדְּ",
+        "וַיֵּבְךְּ"
+      ]
+    },
+    {
+      "id": "c13-shva-under-dagesh",
+      "order": 13,
+      "name": "Shva under Dagesh",
+      "count": 3,
+      "words": [
+        "מִבְּנֵי",
+        "סִפְּרוּ",
+        "קַיְּמֵנִי"
+      ]
+    },
+    {
+      "id": "c14-g2-sheva-after-shuruk-in-beg",
+      "order": 14,
+      "name": "G2 Sheva after SHURUK in beg.",
+      "count": 3,
+      "words": [
+        "וּרְבוּ",
+        "וּרְדוּ",
+        "וּבְעוֹף"
+      ]
+    },
+    {
+      "id": "c15-g2-sheva-after-sheva",
+      "order": 15,
+      "name": "G2 Sheva after Sheva",
+      "count": 3,
+      "words": [
+        "תִּרְקְדוּ",
+        "תִפְקְדֶנּוּ",
+        "תִּשְׁפְּטוּ"
+      ]
+    },
+    {
+      "id": "c16-g2-sheva-under-twin-letters",
+      "order": 16,
+      "name": "G2 Sheva under Twin letters",
+      "count": 6,
+      "words": [
+        "עוֹרְרָה",
+        "מְרוֹמְמִי",
+        "לְחֶנְנָהּ",
+        "הִלַּלְנוּ",
+        "אֲרוֹמִמְךָ",
+        "לִלְמֹד"
+      ]
+    },
+    {
+      "id": "c17-shuruk-in-begining",
+      "order": 17,
+      "name": "Shuruk in begining",
+      "count": 3,
+      "words": [
+        "וּמָנוֹס",
+        "וּמֵרִים",
+        "וּמֹרֶה"
+      ]
+    },
+    {
+      "id": "c18-confusing-dagesh-vav-vs-shuruk",
+      "order": 18,
+      "name": "Confusing Dagesh Vav vs Shuruk",
+      "count": 3,
+      "words": [
+        "צִוִּיתִיךָ",
+        "חַוָּה",
+        "קַוֵּה"
+      ]
+    },
+    {
+      "id": "c19-confusing-dagesh-shared-nekudah-dot-shin-sin",
+      "order": 19,
+      "name": "Confusing Dagesh Shared Nekudah dot. Shin /Sin",
+      "count": 3,
+      "words": [
+        "נְפָשֹׁת",
+        "שֹׁפֵט",
+        "הַלָּשֹׁן"
+      ]
+    },
+    {
+      "id": "c20-confusing-dagesh-vav-vs-cholam-g2",
+      "order": 20,
+      "name": "Confusing Dagesh Vav vs Cholam G2",
+      "count": 3,
+      "words": [
+        "עֲוֺן",
+        "קְּצָוֺת",
+        "בְּהַעֲוֺתוֹ"
+      ]
+    },
+    {
+      "id": "c21-shared-dot",
+      "order": 21,
+      "name": "Shared Dot",
+      "count": 3,
+      "words": [
+        "יַעְשׂר",
+        "שׂבַע",
+        "יֵבשׁוּ"
+      ]
+    },
+    {
+      "id": "c22-kamatz-yud-ending",
+      "order": 22,
+      "name": "Kamatz Yud Ending",
+      "count": 3,
+      "words": [
+        "מָתָי",
+        "יִשָׁי",
+        "אַבוֹתָי"
+      ]
+    },
+    {
+      "id": "c23-patach-yud-ending",
+      "order": 23,
+      "name": "Patach Yud Ending",
+      "count": 3,
+      "words": [
+        "שָׂדַי",
+        "עָלַי",
+        "שְֹפָתַי"
+      ]
+    },
+    {
+      "id": "c24-silent-letter-and-yud-endings-g2",
+      "order": 24,
+      "name": "Silent Letter and Yud Endings G2",
+      "count": 3,
+      "words": [
+        "שַׁמַאי",
+        "כְּדַאי",
+        "זַכַּאי"
+      ]
+    },
+    {
+      "id": "c25-shuruk-yud-ending-g2",
+      "order": 25,
+      "name": "Shuruk Yud Ending G2",
+      "count": 3,
+      "words": [
+        "וִידוּי",
+        "כְּסוּי",
+        "גָלוּי"
+      ]
+    },
+    {
+      "id": "c26-patach-genuvah-chet-g2",
+      "order": 26,
+      "name": "Patach Genuvah Chet G2",
+      "count": 3,
+      "words": [
+        "פּוֺקֵחַ",
+        "שָׂמֵחַ",
+        "מַצְמִיחַ"
+      ]
+    },
+    {
+      "id": "c27-patach-genuvah-hey-g2",
+      "order": 27,
+      "name": "Patach Genuvah Hey G2",
+      "count": 3,
+      "words": [
+        "הַגְבֵּהַּ",
+        "לְהִתְמַהְמֵהַּ",
+        "נֹהַּ"
+      ]
+    },
+    {
+      "id": "c28-mapik-hey-hey-endings-g2",
+      "order": 28,
+      "name": "Mapik Hey Hey Endings G2",
+      "count": 3,
+      "words": [
+        "בֵּיתָהּ",
+        "בַּעֲבוּרָהּ",
+        "אִישָׁהּ"
+      ]
+    }
+  ]
+}

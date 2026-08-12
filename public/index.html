@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Kriah Reading Assessment Generator</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Kriah Reading Assessment Generator</h1>
+    <p>Build Teacher and Student reading assessment sheets from the Ganeinu Kriah word bank.</p>
+  </header>
+
+  <main class="layout">
+    <section class="panel options-panel">
+      <div class="card">
+        <h2>Document Info</h2>
+        <label class="field">
+          <span>Document Title</span>
+          <input id="doc-title" type="text" maxlength="120" />
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span>Student Name <em>(optional)</em></span>
+            <input id="student-name" type="text" maxlength="80" placeholder="left blank to write in by hand" />
+          </label>
+          <label class="field">
+            <span>Date</span>
+            <input id="doc-date" type="date" />
+          </label>
+        </div>
+        <label class="field field-narrow">
+          <span>Words per row</span>
+          <input id="columns" type="number" min="2" max="5" value="3" />
+        </label>
+      </div>
+
+      <div class="card">
+        <div class="card-header-row">
+          <h2>Categories</h2>
+          <div class="btn-group">
+            <button type="button" id="select-all" class="btn-link">Select all</button>
+            <button type="button" id="clear-all" class="btn-link">Clear</button>
+          </div>
+        </div>
+        <p class="hint">Numbers shown here are the reference numbers that will appear next to each word on the <strong>Teacher</strong> copy only.</p>
+        <div id="category-list" class="category-list" aria-live="polite">
+          <p class="loading">Loading categories…</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Format</h2>
+        <div class="format-toggle" role="radiogroup" aria-label="Document format">
+          <label class="radio-pill">
+            <input type="radio" name="format" value="pdf" checked />
+            <span>PDF</span>
+          </label>
+          <label class="radio-pill">
+            <input type="radio" name="format" value="docx" />
+            <span>Word (.docx)</span>
+          </label>
+        </div>
+
+        <div class="download-row">
+          <button type="button" id="download-teacher" class="btn btn-primary" disabled>
+            Download Teacher Version
+          </button>
+          <button type="button" id="download-student" class="btn btn-secondary" disabled>
+            Download Student Version
+          </button>
+        </div>
+        <p id="status-message" class="status-message" role="status"></p>
+      </div>
+    </section>
+
+    <section class="panel preview-panel">
+      <div class="card preview-card">
+        <div class="card-header-row">
+          <h2>Live Preview</h2>
+          <div class="preview-tabs" role="tablist" aria-label="Preview role">
+            <button type="button" class="tab active" data-role="teacher" role="tab" aria-selected="true">Teacher</button>
+            <button type="button" class="tab" data-role="student" role="tab" aria-selected="false">Student</button>
+          </div>
+        </div>
+        <div class="preview-frame-wrap">
+          <p id="preview-placeholder" class="preview-placeholder">Select one or more categories to see a preview.</p>
+          <iframe id="preview-frame" title="Document preview" hidden></iframe>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>Word list source: Ganeinu Academy Kriah Curriculum.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
