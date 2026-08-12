@@ -30,10 +30,20 @@
             <input id="doc-date" type="date" />
           </label>
         </div>
-        <label class="field field-narrow">
-          <span>Words per row</span>
-          <input id="columns" type="number" min="2" max="5" value="3" />
-        </label>
+        <div class="field-row">
+          <label class="field field-narrow">
+            <span>Words per row</span>
+            <input id="columns" type="number" min="2" max="8" value="4" />
+          </label>
+          <label class="field field-narrow">
+            <span>Page orientation</span>
+            <select id="orientation">
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+          </label>
+        </div>
+        <p class="hint">Tip: more words per row and landscape both help fit everything on one page.</p>
       </div>
 
       <div class="card">

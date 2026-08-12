@@ -25,8 +25,9 @@ async function renderPdf({ role, assembled, meta = {} }) {
 
     const pdfBytes = await page.pdf({
       format: "Letter",
+      landscape: meta.orientation === "landscape",
       printBackground: true,
-      margin: { top: "0.35in", bottom: "0.5in", left: "0.3in", right: "0.3in" },
+      margin: { top: "0.3in", bottom: "0.4in", left: "0.25in", right: "0.25in" },
       displayHeaderFooter: true,
       headerTemplate: "<div></div>",
       footerTemplate: `

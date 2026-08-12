@@ -16,7 +16,7 @@ function clampText(value, maxLen) {
 }
 
 function parseRequest(body) {
-  const { categoryIds, role, columns, studentName, date, title } = body || {};
+  const { categoryIds, role, columns, studentName, date, title, orientation } = body || {};
 
   if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
     throw new ValidationError("categoryIds must be a non-empty array.");
@@ -32,7 +32,8 @@ function parseRequest(body) {
     title: clampText(title, 120) || undefined,
     studentName: clampText(studentName, 80),
     date: clampText(date, 40),
-    columns: Math.min(Math.max(Number(columns) || 3, 2), 5),
+    columns: Math.min(Math.max(Number(columns) || 3, 2), 8),
+    orientation: orientation === "landscape" ? "landscape" : "portrait",
   };
 
   return { categoryIds, role, meta };

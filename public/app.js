@@ -9,6 +9,7 @@
     studentName: document.getElementById("student-name"),
     date: document.getElementById("doc-date"),
     columns: document.getElementById("columns"),
+    orientation: document.getElementById("orientation"),
     categoryList: document.getElementById("category-list"),
     selectAll: document.getElementById("select-all"),
     clearAll: document.getElementById("clear-all"),
@@ -96,6 +97,7 @@
       studentName: el.studentName.value.trim(),
       date: el.date.value.trim(),
       columns: Number(el.columns.value) || 3,
+      orientation: el.orientation.value === "landscape" ? "landscape" : "portrait",
     };
   }
 
@@ -217,6 +219,7 @@
   [el.title, el.studentName, el.date, el.columns].forEach((input) =>
     input.addEventListener("input", schedulePreviewUpdate)
   );
+  el.orientation.addEventListener("change", schedulePreviewUpdate);
   document.querySelectorAll('input[name="format"]').forEach((r) =>
     r.addEventListener("change", () => setStatus(""))
   );

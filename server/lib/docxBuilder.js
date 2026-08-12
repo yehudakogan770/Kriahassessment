@@ -13,6 +13,7 @@ const {
   Header,
   Footer,
   PageNumber,
+  PageOrientation,
   convertInchesToTwip,
 } = require("docx");
 const { sizeTier } = require("./htmlTemplate");
@@ -24,7 +25,12 @@ const ACCENT = "7A1F2B";
 const GRAY = "555555";
 
 const MARGIN_IN = 0.6;
-const USABLE_WIDTH_TWIP = convertInchesToTwip(8.5 - MARGIN_IN * 2);
+const PAGE_SIZE_IN = { portrait: [8.5, 11], landscape: [11, 8.5] };
+
+function usableWidthTwip(orientation) {
+  const [widthIn] = PAGE_SIZE_IN[orientation];
+  return convertInchesToTwip(widthIn - MARGIN_IN * 2);
+}
 
 const NONE_BORDER = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
 const NO_TABLE_BORDERS = {
@@ -52,7 +58,7 @@ const BOX_PARAGRAPH_BORDER = {
 
 // Base half-point (docx `size` unit) font sizes per word-length tier, tuned
 // for a 3-column grid; scaledTierSize() adjusts for the actual column count.
-const TIER_BASE_SIZE = { xl: 64, lg: 52, md: 40, sm: 30 };
+const TIER_BASE_SIZE = { xl: 56, lg: 44, md: 34, sm: 26 };
 
 function scaledTierSize(tier, columns) {
   const scale = Math.min(1.25, Math.max(0.7, 3 / columns));
@@ -80,7 +86,7 @@ function titleBlock(title, roleLabel) {
   ];
 }
 
-function metaFieldsTable(role, meta) {
+function metaFieldsTable(role, meta, usableWidth) {
   const fields = [
     { label: "Student Name", value: meta.studentName || "" },
     { label: "Date", value: meta.date || "" },
@@ -90,7 +96,7 @@ function metaFieldsTable(role, meta) {
     fields.push({ label: "Reading Speed / Time", value: "" });
   }
 
-  const cellWidth = Math.floor(USABLE_WIDTH_TWIP / fields.length);
+  const cellWidth = Math.floor(usableWidth / fields.length);
   const cells = fields.map(
     (f) =>
       new TableCell({
@@ -115,7 +121,7 @@ function metaFieldsTable(role, meta) {
   );
 
   return new Table({
-    width: { size: USABLE_WIDTH_TWIP, type: WidthType.DXA },
+    width: { size: usableWidth, type: WidthType.DXA },
     visuallyRightToLeft: true,
     borders: NO_TABLE_BORDERS,
     rows: [new TableRow({ children: cells })],
@@ -124,10 +130,9 @@ function metaFieldsTable(role, meta) {
 
 function instructionsBlock() {
   const heading = new Paragraph({
-    bidirectional: true,
-    alignment: AlignmentType.RIGHT,
+    alignment: AlignmentType.LEFT,
     border: BOX_PARAGRAPH_BORDER,
-    spacing: { before: 120, after: 60 },
+    spacing: { before: 80, after: 40 },
     children: [
       new TextRun({ text: "Teacher Testing Instructions", bold: true, size: 22, font: UI_FONT }),
     ],
@@ -136,22 +141,21 @@ function instructionsBlock() {
   const items = TEACHER_INSTRUCTIONS.map(
     (line, i) =>
       new Paragraph({
-        bidirectional: true,
-        alignment: AlignmentType.RIGHT,
+        alignment: AlignmentType.LEFT,
         border: BOX_PARAGRAPH_BORDER,
         indent: { left: 200, right: 200 },
-        spacing: i === TEACHER_INSTRUCTIONS.length - 1 ? { after: 160 } : undefined,
-        children: [new TextRun({ text: `${i + 1}. ${line}`, size: 19, font: UI_FONT })],
+        spacing: { after: i === TEACHER_INSTRUCTIONS.length - 1 ? 100 : 0 },
+        children: [new TextRun({ text: `${i + 1}. ${line}`, size: 18, font: UI_FONT })],
       })
   );
 
   return [heading, ...items];
 }
 
-function resultsSummaryTable(summary) {
+function resultsSummaryTable(summary, usableWidth) {
   const headerRow = new TableRow({
     tableHeader: true,
-    children: ["Read Incorrectly", "# Words", "Category", "#"].map(
+    children: ["#", "Category", "Read Incorrectly"].map(
       (text) =>
         new TableCell({
           shading: { fill: "EEEEEE" },
@@ -159,7 +163,6 @@ function resultsSummaryTable(summary) {
           verticalAlign: VerticalAlign.CENTER,
           children: [
             new Paragraph({
-              bidirectional: true,
               alignment: AlignmentType.CENTER,
               children: [new TextRun({ text, bold: true, size: 18, font: UI_FONT })],
             }),
@@ -175,8 +178,7 @@ function resultsSummaryTable(summary) {
         verticalAlign: VerticalAlign.CENTER,
         children: [
           new Paragraph({
-            bidirectional: true,
-            alignment: AlignmentType.CENTER,
+            alignment: opts.align || AlignmentType.CENTER,
             children: [new TextRun({ text: String(text), size: 18, font: opts.font || UI_FONT, bold: !!opts.bold, color: opts.color })],
           }),
         ],
@@ -184,29 +186,25 @@ function resultsSummaryTable(summary) {
 
     return new TableRow({
       children: [
-        cell(`______ / ${s.count}`),
-        cell(s.count),
-        cell(s.categoryName, { font: FONT, bold: true }),
         cell(s.categoryNumber, { color: ACCENT, bold: true }),
+        cell(s.categoryName, { font: UI_FONT, bold: true, align: AlignmentType.LEFT }),
+        cell(`______ / ${s.count}`),
       ],
     });
   });
 
   const heading = new Paragraph({
-    bidirectional: true,
-    alignment: AlignmentType.RIGHT,
-    spacing: { before: 160, after: 60 },
+    alignment: AlignmentType.LEFT,
+    spacing: { before: 100, after: 40 },
     children: [new TextRun({ text: "Results Summary", bold: true, size: 22, font: UI_FONT })],
   });
 
   const table = new Table({
-    width: { size: USABLE_WIDTH_TWIP, type: WidthType.DXA },
-    visuallyRightToLeft: true,
+    width: { size: usableWidth, type: WidthType.DXA },
     columnWidths: [
-      Math.floor(USABLE_WIDTH_TWIP * 0.22),
-      Math.floor(USABLE_WIDTH_TWIP * 0.13),
-      Math.floor(USABLE_WIDTH_TWIP * 0.5),
-      Math.floor(USABLE_WIDTH_TWIP * 0.15),
+      Math.floor(usableWidth * 0.1),
+      Math.floor(usableWidth * 0.65),
+      Math.floor(usableWidth * 0.25),
     ],
     rows: [headerRow, ...rows],
   });
@@ -242,10 +240,10 @@ function wordCell(word, role, columns, tier, cellWidth) {
     width: { size: cellWidth, type: WidthType.DXA },
     borders: GRID_CELL_BORDERS,
     verticalAlign: VerticalAlign.CENTER,
-    margins: { top: 60, bottom: 100, left: 80, right: 80 },
+    margins: { top: 20, bottom: 30, left: 60, right: 60 },
     children: [
-      new Paragraph({ alignment: AlignmentType.CENTER, children: [seqRun] }),
-      new Paragraph({ bidirectional: true, alignment: AlignmentType.CENTER, children: wordRunChildren }),
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [seqRun] }),
+      new Paragraph({ bidirectional: true, alignment: AlignmentType.CENTER, spacing: { before: 0 }, children: wordRunChildren }),
     ],
   });
 }
@@ -258,8 +256,8 @@ function emptyCell(cellWidth) {
   });
 }
 
-function wordGridBlocks(groups, role, columns) {
-  const cellWidth = Math.floor(USABLE_WIDTH_TWIP / columns);
+function wordGridBlocks(groups, role, columns, usableWidth) {
+  const cellWidth = Math.floor(usableWidth / columns);
   const blocks = [];
 
   for (const group of groups) {
@@ -269,17 +267,17 @@ function wordGridBlocks(groups, role, columns) {
           bidirectional: true,
           alignment: AlignmentType.RIGHT,
           shading: { fill: "F1E9EA" },
-          spacing: { before: 200, after: 80 },
+          spacing: { before: 100, after: 30 },
           indent: { left: 100, right: 100 },
           children: [
-            new TextRun({ text: String(group.categoryNumber), bold: true, color: ACCENT, size: 20, font: UI_FONT }),
-            new TextRun({ text: `  ${group.categoryName}  `, bold: true, size: 20, font: FONT }),
-            new TextRun({ text: `(${group.count} words)`, size: 16, color: GRAY, font: UI_FONT }),
+            new TextRun({ text: String(group.categoryNumber), bold: true, color: ACCENT, size: 18, font: UI_FONT }),
+            new TextRun({ text: `  ${group.categoryName}  `, bold: true, size: 18, font: FONT }),
+            new TextRun({ text: `(${group.count} words)`, size: 14, color: GRAY, font: UI_FONT }),
           ],
         })
       );
     } else {
-      blocks.push(new Paragraph({ spacing: { before: 160 }, children: [] }));
+      blocks.push(new Paragraph({ spacing: { before: 60 }, children: [] }));
     }
 
     const tier = sizeTier(group.words);
@@ -291,7 +289,7 @@ function wordGridBlocks(groups, role, columns) {
 
     blocks.push(
       new Table({
-        width: { size: USABLE_WIDTH_TWIP, type: WidthType.DXA },
+        width: { size: usableWidth, type: WidthType.DXA },
         visuallyRightToLeft: true,
         columnWidths: Array(columns).fill(cellWidth),
         rows,
@@ -320,20 +318,22 @@ function footer(title, roleLabel) {
 
 async function renderDocx({ role, assembled, meta = {} }) {
   const title = meta.title || "Kriah Reading Assessment";
-  const columns = Math.min(Math.max(Number(meta.columns) || 3, 2), 5);
+  const columns = Math.min(Math.max(Number(meta.columns) || 3, 2), 8);
   const roleLabel = role === "teacher" ? "Teacher / Examiner Copy" : "Student Copy";
+  const orientation = meta.orientation === "landscape" ? "landscape" : "portrait";
+  const usableWidth = usableWidthTwip(orientation);
 
   const children = [
     ...titleBlock(title, roleLabel),
-    metaFieldsTable(role, meta),
+    metaFieldsTable(role, meta, usableWidth),
   ];
 
   if (role === "teacher") {
     children.push(...instructionsBlock());
-    children.push(...resultsSummaryTable(assembled.summary));
+    children.push(...resultsSummaryTable(assembled.summary, usableWidth));
   }
 
-  children.push(...wordGridBlocks(assembled.groups, role, columns));
+  children.push(...wordGridBlocks(assembled.groups, role, columns, usableWidth));
 
   const doc = new Document({
     title: `${title} - ${roleLabel}`,
@@ -341,7 +341,15 @@ async function renderDocx({ role, assembled, meta = {} }) {
       {
         properties: {
           page: {
-            size: { width: convertInchesToTwip(8.5), height: convertInchesToTwip(11) },
+            // docx swaps width/height itself based on `orientation`, so this
+            // size must always be given in portrait terms regardless of the
+            // page's actual orientation (see PAGE_SIZE_IN / usableWidthTwip
+            // for the already-swapped dimensions used in our own layout math).
+            size: {
+              width: convertInchesToTwip(PAGE_SIZE_IN.portrait[0]),
+              height: convertInchesToTwip(PAGE_SIZE_IN.portrait[1]),
+              orientation: orientation === "landscape" ? PageOrientation.LANDSCAPE : PageOrientation.PORTRAIT,
+            },
             margin: {
               top: convertInchesToTwip(0.5),
               bottom: convertInchesToTwip(0.6),

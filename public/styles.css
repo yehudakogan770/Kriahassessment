@@ -59,14 +59,15 @@ body {
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #333; margin-bottom: 10px; }
 .field span { font-weight: 600; }
 .field em { font-weight: 400; color: var(--muted); font-style: normal; }
-.field input {
+.field input, .field select {
   font-size: 14px;
   padding: 7px 9px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-family: inherit;
+  background: #fff;
 }
-.field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .field-row { display: flex; gap: 12px; }
 .field-row .field { flex: 1; }

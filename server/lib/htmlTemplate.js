@@ -33,7 +33,7 @@ function renderInstructions() {
     (line, i) => `<li>${escapeHtml(line)}</li>`
   ).join("\n");
   return `
-  <section class="instructions">
+  <section class="instructions" dir="ltr">
     <h2>Teacher Testing Instructions</h2>
     <ol>${items}</ol>
   </section>`;
@@ -46,21 +46,19 @@ function renderResultsSummary(summary) {
       <tr>
         <td class="num-cell"><span class="cat-badge">${s.categoryNumber}</span></td>
         <td class="name-cell">${escapeHtml(s.categoryName)}</td>
-        <td class="count-cell">${s.count}</td>
         <td class="blank-cell">______ / ${s.count}</td>
       </tr>`
     )
     .join("\n");
 
   return `
-  <section class="results-summary">
+  <section class="results-summary" dir="ltr">
     <h2>Results Summary</h2>
     <table>
       <thead>
         <tr>
           <th>#</th>
           <th>Category</th>
-          <th># Words</th>
           <th>Read Incorrectly</th>
         </tr>
       </thead>
@@ -193,10 +191,12 @@ function css() {
     }
 
     .instructions {
+      direction: ltr;
+      text-align: left;
       border: 1px solid #444;
       border-radius: 8px;
-      padding: 8px 16px 10px;
-      margin-bottom: 12px;
+      padding: 6px 14px 8px;
+      margin-bottom: 8px;
       font-family: 'Segoe UI', Arial, sans-serif;
       page-break-inside: avoid;
     }
@@ -208,11 +208,11 @@ function css() {
     .instructions ol {
       margin: 4px 0 0;
       padding-inline-start: 20px;
-      font-size: 10pt;
-      line-height: 1.45;
+      font-size: 9.5pt;
+      line-height: 1.3;
     }
 
-    .results-summary { margin-bottom: 14px; page-break-inside: avoid; }
+    .results-summary { direction: ltr; text-align: left; margin-bottom: 8px; page-break-inside: avoid; }
     .results-summary table {
       width: 100%;
       border-collapse: collapse;
@@ -221,12 +221,13 @@ function css() {
     }
     .results-summary th, .results-summary td {
       border: 1px solid #888;
-      padding: 4px 8px;
+      padding: 3px 8px;
       text-align: center;
     }
     .results-summary th { background: #eee; }
-    .results-summary .name-cell { text-align: right; direction: rtl; font-family: 'David Libre', serif; font-size: 11pt; }
-    .results-summary .blank-cell { color: #555; }
+    .results-summary .num-cell { width: 32px; }
+    .results-summary .name-cell { text-align: left; font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; }
+    .results-summary .blank-cell { color: #555; width: 120px; }
 
     .cat-badge {
       display: inline-flex;
@@ -242,61 +243,61 @@ function css() {
     }
 
     .word-grid { }
-    .cat-block { margin-bottom: 14px; }
+    .cat-block { margin-bottom: 6px; }
     .cat-heading {
       display: flex;
       align-items: center;
       gap: 8px;
       font-family: 'Segoe UI', Arial, sans-serif;
-      font-size: 11pt;
+      font-size: 10pt;
       font-weight: 600;
       background: #f1e9ea;
-      border-radius: 5px;
-      padding: 3px 10px;
-      margin-bottom: 5px;
+      border-radius: 4px;
+      padding: 2px 8px;
+      margin-bottom: 3px;
       page-break-after: avoid;
     }
     .cat-heading .cat-count {
       font-weight: 400;
       color: #555;
-      font-size: 9pt;
+      font-size: 8.5pt;
     }
 
     .grid {
       display: grid;
-      gap: 7px;
+      gap: 3px;
       margin-bottom: 2px;
     }
     .cell {
       container-type: inline-size;
       position: relative;
       border: 1px solid #999;
-      border-radius: 8px;
+      border-radius: 6px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-end;
-      padding: 1.6em 4px 6px;
+      justify-content: center;
+      padding: 0.9em 4px 2px;
       page-break-inside: avoid;
     }
     .cell .seq-num {
       position: absolute;
-      top: 3px;
-      right: 5px;
-      font-size: 8pt;
+      top: 2px;
+      right: 4px;
+      font-size: 7pt;
       color: #777;
       font-family: 'Segoe UI', Arial, sans-serif;
     }
     .cell .cat-num {
       position: absolute;
-      top: 3px;
-      left: 5px;
-      font-size: 8pt;
+      top: 2px;
+      left: 4px;
+      font-size: 7pt;
       color: #fff;
       background: #7a1f2b;
       border-radius: 50%;
-      width: 15px;
-      height: 15px;
+      width: 13px;
+      height: 13px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -304,17 +305,17 @@ function css() {
     }
     .word-text {
       white-space: nowrap;
-      line-height: 1.3;
+      line-height: 1.15;
     }
 
-    .tier-xl .cell { min-height: 78pt; }
-    .tier-xl .word-text { font-size: clamp(22pt, 30cqw, 44pt); }
-    .tier-lg .cell { min-height: 68pt; }
-    .tier-lg .word-text { font-size: clamp(18pt, 24cqw, 34pt); }
-    .tier-md .cell { min-height: 60pt; }
-    .tier-md .word-text { font-size: clamp(14pt, 18cqw, 26pt); }
-    .tier-sm .cell { min-height: 54pt; }
-    .tier-sm .word-text { font-size: clamp(11pt, 13cqw, 20pt); }
+    .tier-xl .cell { min-height: 40pt; }
+    .tier-xl .word-text { font-size: clamp(16pt, 26cqw, 32pt); }
+    .tier-lg .cell { min-height: 36pt; }
+    .tier-lg .word-text { font-size: clamp(13pt, 20cqw, 25pt); }
+    .tier-md .cell { min-height: 32pt; }
+    .tier-md .word-text { font-size: clamp(11pt, 15cqw, 19pt); }
+    .tier-sm .cell { min-height: 28pt; }
+    .tier-sm .word-text { font-size: clamp(9.5pt, 11cqw, 15pt); }
 
     @media print {
       .cat-block { break-inside: auto; }
@@ -324,15 +325,19 @@ function css() {
 
 function buildHtml({ role, assembled, meta = {} }) {
   const title = meta.title ? escapeHtml(meta.title) : "Kriah Reading Assessment";
-  const columns = Math.min(Math.max(Number(meta.columns) || 3, 2), 5);
+  const columns = Math.min(Math.max(Number(meta.columns) || 3, 2), 8);
   const roleLabel = role === "teacher" ? "Teacher / Examiner Copy" : "Student Copy";
+  const orientation = meta.orientation === "landscape" ? "landscape" : "portrait";
 
   return `<!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
 <meta charset="utf-8" />
 <title>${title} - ${roleLabel}</title>
-<style>${css()}</style>
+<style>
+  @page { size: letter ${orientation}; margin: 0; }
+  ${css()}
+</style>
 </head>
 <body>
   <div class="doc-header">
