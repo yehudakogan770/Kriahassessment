@@ -108,6 +108,13 @@ button, input, select { font-family: inherit; color: inherit; }
   line-height: 1;
   margin-bottom: 10px;
 }
+.auth-logo {
+  display: block;
+  max-height: 64px;
+  max-width: 100%;
+  object-fit: contain;
+  margin: 0 auto 10px;
+}
 .auth-card h1 {
   font-size: 18px;
   margin: 0 0 4px;
@@ -311,6 +318,27 @@ button:focus-visible, .tab:focus-visible, .radio-pill:has(input:focus-visible) {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+.cat-limit-row[hidden] { display: none; }
+.cat-limit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 8px 33px;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 11.5px;
+  color: var(--muted);
+  background: var(--surface);
+}
+.cat-limit {
+  width: 46px;
+  font-size: 12px;
+  padding: 3px 5px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
 .category-row .cat-badge[hidden] { display: none; }
 .category-row .cat-badge {
   display: inline-flex;
@@ -33917,8 +33945,14 @@ class InvalidSelectionError extends Error {}
  * numbers the same way no matter how a client happened to list them. Every
  * word in a given category shares that one category number; the row number
  * is a separate sequential count that runs across the whole assembled list.
+ *
+ * `limits` optionally caps how many words to take from a category (its
+ * first N, in spreadsheet order) - e.g. { "c01-letters-3x": 26 } to test
+ * fewer than the category's full word count. Categories not present in
+ * `limits`, or with a limit at/above the category's full count, use every
+ * word as before.
  */
-function assemble(categoryIds) {
+function assemble(categoryIds, limits = {}) {
   if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
     throw new InvalidSelectionError("Select at least one category.");
   }
@@ -33937,7 +33971,12 @@ function assemble(categoryIds) {
   let rowNumber = 0;
   const groups = selected.map((cat, index) => {
     const categoryNumber = index + 1;
-    const words = cat.words.map((text) => {
+    const limit = limits[cat.id];
+    const wordList =
+      Number.isInteger(limit) && limit > 0 && limit < cat.words.length
+        ? cat.words.slice(0, limit)
+        : cat.words;
+    const words = wordList.map((text) => {
       rowNumber += 1;
       return { rowNumber, text, categoryNumber };
     });
@@ -33945,7 +33984,7 @@ function assemble(categoryIds) {
       categoryNumber,
       categoryId: cat.id,
       categoryName: cat.name,
-      count: cat.words.length,
+      count: wordList.length,
       words,
     };
   });
@@ -34692,6 +34731,41 @@ async function renderDocx({ role, assembled, meta = {} }) {
 
 
 
+// Shared with the school-logo upload feature further down: same storage
+// key, so a logo set from the header also drives the tab icon and the
+// sign-in screen's mark, and a logo already saved from a previous visit
+// applies to both before the auth gate even renders.
+const LOGO_STORAGE_KEY = "kriah-school-logo";
+
+function updateFavicon(dataUrl) {
+  let link = document.querySelector('link[rel="icon"]');
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
+  }
+  link.href = dataUrl;
+}
+
+(function applyStoredLogoEarly() {
+  let dataUrl;
+  try {
+    dataUrl = localStorage.getItem(LOGO_STORAGE_KEY);
+  } catch (err) {
+    return; // Storage unavailable - the mark/favicon just stay default.
+  }
+  if (!dataUrl) return;
+  updateFavicon(dataUrl);
+  const authMark = document.querySelector("#auth-form .mark");
+  if (authMark) {
+    const img = document.createElement("img");
+    img.className = "auth-logo";
+    img.src = dataUrl;
+    img.alt = "School logo";
+    authMark.replaceWith(img);
+  }
+})();
+
 // Soft deterrent, not real security: the whole page - including this hash -
 // ships to the browser, so anyone reading the source can find the passcode.
 // It just keeps the link from being casually stumbled into. To change it,
@@ -34792,7 +34866,6 @@ async function renderDocx({ role, assembled, meta = {} }) {
   };
 
   // ---- School logo (self-service, one-time upload) ----
-  const LOGO_STORAGE_KEY = "kriah-school-logo";
   const MAX_LOGO_BYTES = 3 * 1024 * 1024; // 3MB - localStorage's quota is a few MB total
 
   function setLogoStatus(message, kind) {
@@ -34812,6 +34885,7 @@ async function renderDocx({ role, assembled, meta = {} }) {
     img.addEventListener("click", () => el.logoFile.click());
     el.markSlot.appendChild(img);
     el.logoUploadLabel.hidden = true;
+    updateFavicon(dataUrl);
   }
 
   (function initLogo() {
@@ -34878,6 +34952,9 @@ async function renderDocx({ role, assembled, meta = {} }) {
         el.categoryList.appendChild(label);
       }
 
+      const item = document.createElement("div");
+      item.className = "category-item";
+
       const row = document.createElement("label");
       row.className = "category-row";
       row.dataset.id = cat.id;
@@ -34899,8 +34976,61 @@ async function renderDocx({ role, assembled, meta = {} }) {
       badge.hidden = true;
 
       row.append(checkbox, name, count, badge);
-      el.categoryList.appendChild(row);
+      item.appendChild(row);
+
+      // A limit only makes sense when there's more than one word to trim
+      // down from - e.g. "Letters (3x)" has every letter 3 times, and a
+      // teacher may only want to test some of them.
+      if (cat.count > 1) {
+        const limitRow = document.createElement("div");
+        limitRow.className = "cat-limit-row";
+        limitRow.hidden = true;
+
+        const limitLabel = document.createElement("span");
+        limitLabel.textContent = "Use only";
+
+        const limitInput = document.createElement("input");
+        limitInput.type = "number";
+        limitInput.className = "cat-limit";
+        limitInput.min = "1";
+        limitInput.max = String(cat.count);
+        limitInput.value = String(cat.count);
+        limitInput.addEventListener("change", () => {
+          let n = Math.round(Number(limitInput.value));
+          if (!Number.isFinite(n) || n < 1) n = 1;
+          if (n > cat.count) n = cat.count;
+          limitInput.value = String(n);
+        });
+
+        const limitSuffix = document.createElement("span");
+        limitSuffix.textContent = `of ${cat.count} words`;
+
+        limitRow.append(limitLabel, limitInput, limitSuffix);
+        item.appendChild(limitRow);
+
+        checkbox.addEventListener("change", () => {
+          limitRow.hidden = !checkbox.checked;
+        });
+      }
+
+      el.categoryList.appendChild(item);
     }
+  }
+
+  /** Reads each checked category's "use only N" input (if any narrower
+   * than its full word count) into a { categoryId: limit } map for
+   * assemble(). Categories left at their full count are omitted, which
+   * assemble() also treats as "use every word" - either way is fine. */
+  function getCategoryLimits() {
+    const limits = {};
+    for (const item of el.categoryList.querySelectorAll(".category-item")) {
+      const checkbox = item.querySelector("input[type=checkbox]");
+      const limitInput = item.querySelector(".cat-limit");
+      if (!checkbox.checked || !limitInput) continue;
+      const n = Math.round(Number(limitInput.value));
+      if (Number.isFinite(n) && n > 0) limits[checkbox.value] = n;
+    }
+    return limits;
   }
 
   function setImportStatus(message, kind) {
@@ -35037,7 +35167,7 @@ async function renderDocx({ role, assembled, meta = {} }) {
     }
 
     try {
-      const assembled = assemble(categoryIds);
+      const assembled = assemble(categoryIds, getCategoryLimits());
       const html = buildHtml({ role: state.previewRole, assembled, meta: buildMeta() });
       el.previewFrame.srcdoc = html;
       el.previewFrame.hidden = false;
@@ -35067,7 +35197,7 @@ async function renderDocx({ role, assembled, meta = {} }) {
 
   function printDocument(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds);
+    const assembled = assemble(categoryIds, getCategoryLimits());
     const meta = buildMeta();
     const html = buildHtml({ role, assembled, meta });
 
@@ -35082,7 +35212,7 @@ async function renderDocx({ role, assembled, meta = {} }) {
 
   async function downloadWord(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds);
+    const assembled = assemble(categoryIds, getCategoryLimits());
     const meta = buildMeta();
     const blob = await renderDocx({ role, assembled, meta });
     const filename = filenameFor({ title: meta.title, role, format: "docx", date: meta.date });

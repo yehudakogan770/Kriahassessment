@@ -11,8 +11,14 @@ class InvalidSelectionError extends Error {}
  * numbers the same way no matter how a client happened to list them. Every
  * word in a given category shares that one category number; the row number
  * is a separate sequential count that runs across the whole assembled list.
+ *
+ * `limits` optionally caps how many words to take from a category (its
+ * first N, in spreadsheet order) - e.g. { "c01-letters-3x": 26 } to test
+ * fewer than the category's full word count. Categories not present in
+ * `limits`, or with a limit at/above the category's full count, use every
+ * word as before.
  */
-function assemble(categoryIds) {
+function assemble(categoryIds, limits = {}) {
   if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
     throw new InvalidSelectionError("Select at least one category.");
   }
@@ -31,7 +37,12 @@ function assemble(categoryIds) {
   let rowNumber = 0;
   const groups = selected.map((cat, index) => {
     const categoryNumber = index + 1;
-    const words = cat.words.map((text) => {
+    const limit = limits[cat.id];
+    const wordList =
+      Number.isInteger(limit) && limit > 0 && limit < cat.words.length
+        ? cat.words.slice(0, limit)
+        : cat.words;
+    const words = wordList.map((text) => {
       rowNumber += 1;
       return { rowNumber, text, categoryNumber };
     });
@@ -39,7 +50,7 @@ function assemble(categoryIds) {
       categoryNumber,
       categoryId: cat.id,
       categoryName: cat.name,
-      count: cat.words.length,
+      count: wordList.length,
       words,
     };
   });

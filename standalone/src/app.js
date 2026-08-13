@@ -1,3 +1,38 @@
+// Shared with the school-logo upload feature further down: same storage
+// key, so a logo set from the header also drives the tab icon and the
+// sign-in screen's mark, and a logo already saved from a previous visit
+// applies to both before the auth gate even renders.
+const LOGO_STORAGE_KEY = "kriah-school-logo";
+
+function updateFavicon(dataUrl) {
+  let link = document.querySelector('link[rel="icon"]');
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
+  }
+  link.href = dataUrl;
+}
+
+(function applyStoredLogoEarly() {
+  let dataUrl;
+  try {
+    dataUrl = localStorage.getItem(LOGO_STORAGE_KEY);
+  } catch (err) {
+    return; // Storage unavailable - the mark/favicon just stay default.
+  }
+  if (!dataUrl) return;
+  updateFavicon(dataUrl);
+  const authMark = document.querySelector("#auth-form .mark");
+  if (authMark) {
+    const img = document.createElement("img");
+    img.className = "auth-logo";
+    img.src = dataUrl;
+    img.alt = "School logo";
+    authMark.replaceWith(img);
+  }
+})();
+
 // Soft deterrent, not real security: the whole page - including this hash -
 // ships to the browser, so anyone reading the source can find the passcode.
 // It just keeps the link from being casually stumbled into. To change it,
@@ -98,7 +133,6 @@
   };
 
   // ---- School logo (self-service, one-time upload) ----
-  const LOGO_STORAGE_KEY = "kriah-school-logo";
   const MAX_LOGO_BYTES = 3 * 1024 * 1024; // 3MB - localStorage's quota is a few MB total
 
   function setLogoStatus(message, kind) {
@@ -118,6 +152,7 @@
     img.addEventListener("click", () => el.logoFile.click());
     el.markSlot.appendChild(img);
     el.logoUploadLabel.hidden = true;
+    updateFavicon(dataUrl);
   }
 
   (function initLogo() {
@@ -184,6 +219,9 @@
         el.categoryList.appendChild(label);
       }
 
+      const item = document.createElement("div");
+      item.className = "category-item";
+
       const row = document.createElement("label");
       row.className = "category-row";
       row.dataset.id = cat.id;
@@ -205,8 +243,61 @@
       badge.hidden = true;
 
       row.append(checkbox, name, count, badge);
-      el.categoryList.appendChild(row);
+      item.appendChild(row);
+
+      // A limit only makes sense when there's more than one word to trim
+      // down from - e.g. "Letters (3x)" has every letter 3 times, and a
+      // teacher may only want to test some of them.
+      if (cat.count > 1) {
+        const limitRow = document.createElement("div");
+        limitRow.className = "cat-limit-row";
+        limitRow.hidden = true;
+
+        const limitLabel = document.createElement("span");
+        limitLabel.textContent = "Use only";
+
+        const limitInput = document.createElement("input");
+        limitInput.type = "number";
+        limitInput.className = "cat-limit";
+        limitInput.min = "1";
+        limitInput.max = String(cat.count);
+        limitInput.value = String(cat.count);
+        limitInput.addEventListener("change", () => {
+          let n = Math.round(Number(limitInput.value));
+          if (!Number.isFinite(n) || n < 1) n = 1;
+          if (n > cat.count) n = cat.count;
+          limitInput.value = String(n);
+        });
+
+        const limitSuffix = document.createElement("span");
+        limitSuffix.textContent = `of ${cat.count} words`;
+
+        limitRow.append(limitLabel, limitInput, limitSuffix);
+        item.appendChild(limitRow);
+
+        checkbox.addEventListener("change", () => {
+          limitRow.hidden = !checkbox.checked;
+        });
+      }
+
+      el.categoryList.appendChild(item);
     }
+  }
+
+  /** Reads each checked category's "use only N" input (if any narrower
+   * than its full word count) into a { categoryId: limit } map for
+   * assemble(). Categories left at their full count are omitted, which
+   * assemble() also treats as "use every word" - either way is fine. */
+  function getCategoryLimits() {
+    const limits = {};
+    for (const item of el.categoryList.querySelectorAll(".category-item")) {
+      const checkbox = item.querySelector("input[type=checkbox]");
+      const limitInput = item.querySelector(".cat-limit");
+      if (!checkbox.checked || !limitInput) continue;
+      const n = Math.round(Number(limitInput.value));
+      if (Number.isFinite(n) && n > 0) limits[checkbox.value] = n;
+    }
+    return limits;
   }
 
   function setImportStatus(message, kind) {
@@ -343,7 +434,7 @@
     }
 
     try {
-      const assembled = assemble(categoryIds);
+      const assembled = assemble(categoryIds, getCategoryLimits());
       const html = buildHtml({ role: state.previewRole, assembled, meta: buildMeta() });
       el.previewFrame.srcdoc = html;
       el.previewFrame.hidden = false;
@@ -373,7 +464,7 @@
 
   function printDocument(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds);
+    const assembled = assemble(categoryIds, getCategoryLimits());
     const meta = buildMeta();
     const html = buildHtml({ role, assembled, meta });
 
@@ -388,7 +479,7 @@
 
   async function downloadWord(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds);
+    const assembled = assemble(categoryIds, getCategoryLimits());
     const meta = buildMeta();
     const blob = await renderDocx({ role, assembled, meta });
     const filename = filenameFor({ title: meta.title, role, format: "docx", date: meta.date });
