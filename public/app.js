@@ -7,6 +7,7 @@
   const el = {
     title: document.getElementById("doc-title"),
     studentName: document.getElementById("student-name"),
+    grade: document.getElementById("student-grade"),
     date: document.getElementById("doc-date"),
     columns: document.getElementById("columns"),
     orientation: document.getElementById("orientation"),
@@ -95,6 +96,7 @@
     return {
       title: el.title.value.trim() || undefined,
       studentName: el.studentName.value.trim(),
+      grade: el.grade.value.trim(),
       date: el.date.value.trim(),
       columns: Number(el.columns.value) || 3,
       orientation: el.orientation.value === "landscape" ? "landscape" : "portrait",
@@ -216,7 +218,7 @@
   });
   el.downloadTeacher.addEventListener("click", () => download("teacher"));
   el.downloadStudent.addEventListener("click", () => download("student"));
-  [el.title, el.studentName, el.date, el.columns].forEach((input) =>
+  [el.title, el.studentName, el.grade, el.date, el.columns].forEach((input) =>
     input.addEventListener("input", schedulePreviewUpdate)
   );
   el.orientation.addEventListener("change", schedulePreviewUpdate);

@@ -100,6 +100,7 @@ function renderWordGrid(words, role, columns) {
 function renderMetaFields(role, meta) {
   const fields = [
     { label: "Student Name", value: meta.studentName ? escapeHtml(meta.studentName) : "" },
+    { label: "Grade / Class", value: meta.grade ? escapeHtml(meta.grade) : "" },
     { label: "Date", value: meta.date ? escapeHtml(meta.date) : "" },
   ];
   if (role === "teacher") {

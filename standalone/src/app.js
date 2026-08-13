@@ -107,6 +107,7 @@ function updateFavicon(dataUrl) {
   const el = {
     title: document.getElementById("doc-title"),
     studentName: document.getElementById("student-name"),
+    grade: document.getElementById("student-grade"),
     date: document.getElementById("doc-date"),
     columns: document.getElementById("columns"),
     orientation: document.getElementById("orientation"),
@@ -246,38 +247,38 @@ function updateFavicon(dataUrl) {
       row.append(checkbox, name, count, badge);
       item.appendChild(row);
 
-      // A limit only makes sense when there's more than one word to trim
-      // down from - e.g. "Letters (3x)" has every letter 3 times, and a
-      // teacher may only want to test some of them.
-      if (cat.count > 1) {
-        const limitRow = document.createElement("div");
-        limitRow.className = "cat-limit-row";
-        limitRow.hidden = true;
+      // Let a teacher pick exactly which words in this category to test -
+      // e.g. "Letters (3x)" repeats every letter 3 times, and only some of
+      // those letters may need testing. Only worth offering when there's
+      // more than one distinct word/letter to choose between.
+      const uniqueWords = [...new Set(cat.words)];
+      if (uniqueWords.length > 1) {
+        const pickerRow = document.createElement("div");
+        pickerRow.className = "cat-picker-row";
+        pickerRow.hidden = true;
 
-        const limitLabel = document.createElement("span");
-        limitLabel.textContent = "Use only";
-
-        const limitInput = document.createElement("input");
-        limitInput.type = "number";
-        limitInput.className = "cat-limit";
-        limitInput.min = "1";
-        limitInput.max = String(cat.count);
-        limitInput.value = String(cat.count);
-        limitInput.addEventListener("change", () => {
-          let n = Math.round(Number(limitInput.value));
-          if (!Number.isFinite(n) || n < 1) n = 1;
-          if (n > cat.count) n = cat.count;
-          limitInput.value = String(n);
-        });
-
-        const limitSuffix = document.createElement("span");
-        limitSuffix.textContent = `of ${cat.count} words`;
-
-        limitRow.append(limitLabel, limitInput, limitSuffix);
-        item.appendChild(limitRow);
+        for (const word of uniqueWords) {
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "word-chip active";
+          chip.textContent = word;
+          chip.dataset.word = word;
+          chip.setAttribute("aria-pressed", "true");
+          chip.title = "Click to exclude from this assessment";
+          chip.addEventListener("click", () => {
+            const chips = pickerRow.querySelectorAll(".word-chip");
+            const activeCount = Array.from(chips).filter((c) => c.classList.contains("active")).length;
+            if (chip.classList.contains("active") && activeCount <= 1) return; // keep at least one word active
+            const active = chip.classList.toggle("active");
+            chip.setAttribute("aria-pressed", String(active));
+            updatePreview();
+          });
+          pickerRow.appendChild(chip);
+        }
+        item.appendChild(pickerRow);
 
         checkbox.addEventListener("change", () => {
-          limitRow.hidden = !checkbox.checked;
+          pickerRow.hidden = !checkbox.checked;
         });
       }
 
@@ -285,20 +286,19 @@ function updateFavicon(dataUrl) {
     }
   }
 
-  /** Reads each checked category's "use only N" input (if any narrower
-   * than its full word count) into a { categoryId: limit } map for
-   * assemble(). Categories left at their full count are omitted, which
+  /** Reads each checked category's word-picker chips into a
+   * { categoryId: [excludedWord, ...] } map for assemble(). A category
+   * with every chip still active (the default) is omitted, which
    * assemble() also treats as "use every word" - either way is fine. */
-  function getCategoryLimits() {
-    const limits = {};
+  function getCategoryFilters() {
+    const filters = {};
     for (const item of el.categoryList.querySelectorAll(".category-item")) {
       const checkbox = item.querySelector("input[type=checkbox]");
-      const limitInput = item.querySelector(".cat-limit");
-      if (!checkbox.checked || !limitInput) continue;
-      const n = Math.round(Number(limitInput.value));
-      if (Number.isFinite(n) && n > 0) limits[checkbox.value] = n;
+      if (!checkbox.checked) continue;
+      const excluded = Array.from(item.querySelectorAll(".word-chip:not(.active)")).map((chip) => chip.dataset.word);
+      if (excluded.length) filters[checkbox.value] = excluded;
     }
-    return limits;
+    return filters;
   }
 
   function setImportStatus(message, kind) {
@@ -403,6 +403,7 @@ function updateFavicon(dataUrl) {
     return {
       title: el.title.value.trim() || undefined,
       studentName: el.studentName.value.trim(),
+      grade: el.grade.value.trim(),
       date: el.date.value.trim(),
       columns: Number(el.columns.value) || 4,
       orientation: el.orientation.value === "landscape" ? "landscape" : "portrait",
@@ -435,7 +436,7 @@ function updateFavicon(dataUrl) {
     }
 
     try {
-      const assembled = assemble(categoryIds, getCategoryLimits());
+      const assembled = assemble(categoryIds, getCategoryFilters());
       const html = buildHtml({ role: state.previewRole, assembled, meta: buildMeta() });
       el.previewFrame.srcdoc = html;
       el.previewFrame.hidden = false;
@@ -465,7 +466,7 @@ function updateFavicon(dataUrl) {
 
   function printDocument(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds, getCategoryLimits());
+    const assembled = assemble(categoryIds, getCategoryFilters());
     const meta = buildMeta();
     const html = buildHtml({ role, assembled, meta });
 
@@ -480,7 +481,7 @@ function updateFavicon(dataUrl) {
 
   async function downloadWord(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds, getCategoryLimits());
+    const assembled = assemble(categoryIds, getCategoryFilters());
     const meta = buildMeta();
     const blob = await renderDocx({ role, assembled, meta });
     const filename = filenameFor({ title: meta.title, role, format: "docx", date: meta.date });
@@ -559,7 +560,7 @@ function updateFavicon(dataUrl) {
     applyWordBank(JSON.parse(JSON.stringify(DEFAULT_CATEGORIES_DATA)));
     setImportStatus("Reset to the default word bank.", "success");
   });
-  [el.title, el.studentName, el.date, el.columns].forEach((input) => input.addEventListener("input", updatePreview));
+  [el.title, el.studentName, el.grade, el.date, el.columns].forEach((input) => input.addEventListener("input", updatePreview));
   el.orientation.addEventListener("change", updatePreview);
   document.querySelectorAll('input[name="format"]').forEach((r) =>
     r.addEventListener("change", () => {

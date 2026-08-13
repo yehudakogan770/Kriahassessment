@@ -25,13 +25,16 @@ function shuffle(arr) {
  * the same word on both copies - shuffling once here, rather than
  * separately per role, is what keeps that true.
  *
- * `limits` optionally caps how many words to take from a category (its
- * first N, in spreadsheet order, before shuffling) - e.g.
- * { "c01-letters-3x": 26 } to test fewer than the category's full word
- * count. Categories not present in `limits`, or with a limit at/above the
- * category's full count, use every word as before.
+ * `filters` optionally excludes specific words from a category - e.g.
+ * { "c01-letters-3x": ["א", "ב"] } to test every letter except alef and
+ * bet. A category's exact text match is excluded everywhere it occurs
+ * (e.g. all 3 repetitions of a letter in "Letters (3x)"), which lets a
+ * teacher pick exactly which letters/words within a category to test.
+ * Categories not present in `filters`, or whose filter would exclude every
+ * word, use every word as before (excluding everything isn't a meaningful
+ * choice - the checkbox for the whole category exists for that).
  */
-function assemble(categoryIds, limits = {}) {
+function assemble(categoryIds, filters = {}) {
   if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
     throw new InvalidSelectionError("Select at least one category.");
   }
@@ -47,25 +50,26 @@ function assemble(categoryIds, limits = {}) {
     throw new InvalidSelectionError(`Unknown category id(s): ${missing.join(", ")}`);
   }
 
-  const summary = selected.map((cat, index) => {
+  const filtered = selected.map((cat, index) => {
     const categoryNumber = index + 1;
-    const limit = limits[cat.id];
-    const count =
-      Number.isInteger(limit) && limit > 0 && limit < cat.words.length
-        ? limit
-        : cat.words.length;
-    return { categoryNumber, categoryId: cat.id, categoryName: cat.name, count };
+    const excluded = filters[cat.id];
+    const kept =
+      Array.isArray(excluded) && excluded.length
+        ? cat.words.filter((w) => !excluded.includes(w))
+        : cat.words;
+    const wordList = kept.length > 0 ? kept : cat.words;
+    return { categoryNumber, categoryId: cat.id, categoryName: cat.name, wordList };
   });
 
-  const words = selected.flatMap((cat, index) => {
-    const categoryNumber = index + 1;
-    const limit = limits[cat.id];
-    const wordList =
-      Number.isInteger(limit) && limit > 0 && limit < cat.words.length
-        ? cat.words.slice(0, limit)
-        : cat.words;
-    return wordList.map((text) => ({ text, categoryNumber }));
-  });
+  const summary = filtered.map((f) => ({
+    categoryNumber: f.categoryNumber,
+    categoryName: f.categoryName,
+    count: f.wordList.length,
+  }));
+
+  const words = filtered.flatMap((f) =>
+    f.wordList.map((text) => ({ text, categoryNumber: f.categoryNumber }))
+  );
   shuffle(words);
   words.forEach((w, i) => {
     w.rowNumber = i + 1;
