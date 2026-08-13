@@ -51,6 +51,12 @@ function escapeLiteralReplacementChar(source) {
   return source.replace(new RegExp(REPLACEMENT_CHAR, "g"), "\\uFFFD");
 }
 
+function buildDefaultLogoDataUrl() {
+  const logoPath = path.join(ROOT, "server", "assets", "branding", "ganeinu-academy-logo.jpg");
+  const base64 = fs.readFileSync(logoPath).toString("base64");
+  return `data:image/jpeg;base64,${base64}`;
+}
+
 function buildFontFaceCss() {
   const fontDir = path.join(ROOT, "server", "assets", "fonts");
   const faces = [
@@ -90,10 +96,12 @@ function buildAppScript() {
   const authPasscodeHash = AUTH_PASSCODE
     ? crypto.createHash("sha256").update(AUTH_PASSCODE, "utf-8").digest("hex")
     : "";
+  const defaultLogoDataUrl = buildDefaultLogoDataUrl();
 
   return `
 "use strict";
 const AUTH_PASSCODE_HASH = ${JSON.stringify(authPasscodeHash)};
+const DEFAULT_LOGO_DATA_URL = ${JSON.stringify(defaultLogoDataUrl)};
 const CATEGORIES_DATA = ${JSON.stringify(categoriesData)};
 function getCategories() { return CATEGORIES_DATA.categories; }
 

@@ -2,21 +2,34 @@ const { getCategories } = require("./data");
 
 class InvalidSelectionError extends Error {}
 
+/** Fisher-Yates - uniform random shuffle, in place. */
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
 /**
- * Turns a set of selected category ids into the numbered structure both
+ * Turns a set of selected category ids into the numbered word list both
  * document builders (HTML/PDF and docx) render from.
  *
  * Category numbers are assigned 1..K by canonical spreadsheet order (not by
  * the order the caller passed them in), so the same set of categories always
  * numbers the same way no matter how a client happened to list them. Every
- * word in a given category shares that one category number; the row number
- * is a separate sequential count that runs across the whole assembled list.
+ * word carries the category number it belongs to, for the Teacher copy's
+ * per-word badge and the Results Summary table - but the words themselves
+ * are shuffled into one order across all selected categories (not grouped
+ * by category) and numbered 1..N in that shuffled order. Teacher and
+ * Student both render from this same `words` list, so word #14 is always
+ * the same word on both copies - shuffling once here, rather than
+ * separately per role, is what keeps that true.
  *
  * `limits` optionally caps how many words to take from a category (its
- * first N, in spreadsheet order) - e.g. { "c01-letters-3x": 26 } to test
- * fewer than the category's full word count. Categories not present in
- * `limits`, or with a limit at/above the category's full count, use every
- * word as before.
+ * first N, in spreadsheet order, before shuffling) - e.g.
+ * { "c01-letters-3x": 26 } to test fewer than the category's full word
+ * count. Categories not present in `limits`, or with a limit at/above the
+ * category's full count, use every word as before.
  */
 function assemble(categoryIds, limits = {}) {
   if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
@@ -34,38 +47,35 @@ function assemble(categoryIds, limits = {}) {
     throw new InvalidSelectionError(`Unknown category id(s): ${missing.join(", ")}`);
   }
 
-  let rowNumber = 0;
-  const groups = selected.map((cat, index) => {
+  const summary = selected.map((cat, index) => {
+    const categoryNumber = index + 1;
+    const limit = limits[cat.id];
+    const count =
+      Number.isInteger(limit) && limit > 0 && limit < cat.words.length
+        ? limit
+        : cat.words.length;
+    return { categoryNumber, categoryId: cat.id, categoryName: cat.name, count };
+  });
+
+  const words = selected.flatMap((cat, index) => {
     const categoryNumber = index + 1;
     const limit = limits[cat.id];
     const wordList =
       Number.isInteger(limit) && limit > 0 && limit < cat.words.length
         ? cat.words.slice(0, limit)
         : cat.words;
-    const words = wordList.map((text) => {
-      rowNumber += 1;
-      return { rowNumber, text, categoryNumber };
-    });
-    return {
-      categoryNumber,
-      categoryId: cat.id,
-      categoryName: cat.name,
-      count: wordList.length,
-      words,
-    };
+    return wordList.map((text) => ({ text, categoryNumber }));
+  });
+  shuffle(words);
+  words.forEach((w, i) => {
+    w.rowNumber = i + 1;
   });
 
-  const summary = groups.map((g) => ({
-    categoryNumber: g.categoryNumber,
-    categoryName: g.categoryName,
-    count: g.count,
-  }));
-
   return {
-    groups,
+    words,
     summary,
-    totalWords: rowNumber,
-    totalCategories: groups.length,
+    totalWords: words.length,
+    totalCategories: summary.length,
   };
 }
 
