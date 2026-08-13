@@ -4,6 +4,20 @@ A website for building Hebrew reading (kriah) assessment sheets from the
 Ganeinu Academy word bank. Pick which skill categories to test, and generate
 matching **Teacher** and **Student** documents as PDF or Word.
 
+There are two ways to use it:
+
+- **`standalone/kriah-assessment-builder.html`** - open this file directly in
+  a browser (double-click it, or drag it into a browser tab). No install, no
+  server, works offline. This is the one to send someone who just wants to
+  use the tool. PDF export opens the browser's print dialog ("Save as PDF");
+  Word downloads directly.
+- **The `server/` app** - `npm install && npm start`, for self-hosting. PDF
+  downloads are generated directly (no print dialog) since it renders with a
+  real headless Chromium server-side.
+
+Both share the same word bank and the same document logic (layout, numbering,
+teacher/student rules) - see "How it's built" below.
+
 ## What it does
 
 - The word bank (28 categories - letters, nekudot, sheva rules, silent
@@ -25,8 +39,14 @@ matching **Teacher** and **Student** documents as PDF or Word.
 - Each format is available as a PDF (nikud rendered via an embedded Hebrew
   font, so it looks the same everywhere) or a Word document (editable, uses
   the system's "David" font for Hebrew text).
+- Words per row (2-8) and page orientation (portrait/landscape) are both
+  adjustable, to help fit a longer assessment onto one page.
 
 ## Running it
+
+Easiest: open `standalone/kriah-assessment-builder.html` in a browser.
+
+To run the server app instead:
 
 ```bash
 npm install
@@ -50,25 +70,47 @@ that category's words (blank cells are skipped), preserving column order -
 that order is what determines the category reference numbers a teacher sees
 in the UI and on the generated sheets.
 
+After changing the word bank, also rebuild the standalone file (see below)
+so it picks up the new data:
+
+```bash
+npm run build-standalone
+```
+
 ## How it's built
 
-- `server/` - Express app.
-  - `lib/assemble.js` - turns a set of selected category ids into the
-    numbered word list both document builders render from.
-  - `lib/htmlTemplate.js` + `lib/fonts.js` - the shared RTL HTML/CSS used
-    both for the live preview and as the input to the PDF renderer. Hebrew
-    text uses the embedded David Libre font (SIL OFL) so nikud renders
-    correctly regardless of what's installed on the viewer's machine.
-  - `lib/pdfBuilder.js` - renders that HTML to PDF with a headless Chromium
-    (via `puppeteer`).
-  - `lib/docxBuilder.js` - builds the Word document natively with the
-    `docx` library (RTL tables/paragraphs, same content structure).
-  - `routes/` - `GET /api/categories`, `POST /api/preview` (returns HTML),
-    `POST /api/generate` (returns the PDF/docx file).
-- `public/` - static frontend (vanilla HTML/CSS/JS): category picker with
-  live-assigned category numbers, format toggle, and the live preview pane.
+- `server/lib/` holds the actual document logic, used by both surfaces:
+  - `assemble.js` - turns a set of selected category ids into the numbered
+    word list both document builders render from.
+  - `htmlTemplate.js` + `fonts.js` - the shared RTL HTML/CSS used both for
+    the live preview and as the input to the PDF renderer. Hebrew text uses
+    the embedded David Libre font (SIL OFL) so nikud renders correctly
+    regardless of what's installed on the viewer's machine.
+  - `pdfBuilder.js` - renders that HTML to PDF with a headless Chromium
+    (via `puppeteer`) - server app only.
+  - `docxBuilder.js` - builds the Word document natively with the `docx`
+    library (RTL tables/paragraphs, same content structure).
+  - `instructions.js` - the verbatim teacher testing instructions.
+- `server/` - the Express app: `routes/` exposes `GET /api/categories`,
+  `POST /api/preview` (returns HTML), `POST /api/generate` (returns the
+  file); `public/` is its static frontend.
+- `standalone/` - the single-file browser app.
+  - `src/` - its UI chrome (`styles.css`, `app.js`, `shell.html`) - the
+    category picker (grouped by word-bank section), live preview, and the
+    export actions (PDF via `window.print()` in a hidden iframe so the
+    browser's own Hebrew text shaping handles nikud; Word via the `docx`
+    package's browser bundle, built to a `Blob` and downloaded directly).
+  - `kriah-assessment-builder.html` - the built output; this is what you
+    actually open. Regenerate it with `npm run build-standalone`, which
+    reads the *same* `server/lib/{instructions,assemble,htmlTemplate,
+    docxBuilder}.js` (stripping the `require`/`module.exports` lines so
+    they share one script scope) plus the word bank, fonts, and the `docx`
+    library, and inlines all of it into one file. This is why both surfaces
+    always agree on layout and numbering - there's only one copy of that
+    logic, not two hand-kept-in-sync copies.
 - `scripts/convert-xlsx-to-json.js` - regenerates `data/categories.json`
   from the source spreadsheet.
+- `scripts/build-standalone.js` - builds `standalone/kriah-assessment-builder.html`.
 
 ## Notes on fonts
 
