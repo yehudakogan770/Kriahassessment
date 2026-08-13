@@ -89,6 +89,7 @@ function titleBlock(title, roleLabel) {
 function metaFieldsTable(role, meta, usableWidth) {
   const fields = [
     { label: "Student Name", value: meta.studentName || "" },
+    { label: "Grade / Class", value: meta.grade || "" },
     { label: "Date", value: meta.date || "" },
   ];
   if (role === "teacher") {

@@ -319,25 +319,31 @@ button:focus-visible, .tab:focus-visible, .radio-pill:has(input:focus-visible) {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
-.cat-limit-row[hidden] { display: none; }
-.cat-limit-row {
+.cat-picker-row[hidden] { display: none; }
+.cat-picker-row {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px 8px 33px;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px 12px 10px 33px;
   border-bottom: 1px solid var(--border-soft);
-  font-size: 11.5px;
-  color: var(--muted);
   background: var(--surface);
 }
-.cat-limit {
-  width: 46px;
-  font-size: 12px;
-  padding: 3px 5px;
+.word-chip {
+  font-family: var(--font-hebrew);
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 2px 9px;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--surface-2);
-  color: var(--ink);
+  color: var(--muted);
+  cursor: pointer;
+}
+.word-chip.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  font-weight: 600;
 }
 
 .category-row .cat-badge[hidden] { display: none; }
@@ -537,6 +543,12 @@ button:focus-visible, .tab:focus-visible, .radio-pill:has(input:focus-visible) {
             <span>Student Name <em>(optional)</em></span>
             <input id="student-name" type="text" maxlength="80" placeholder="left blank to write in by hand" />
           </label>
+          <label class="field">
+            <span>Grade / Class <em>(optional)</em></span>
+            <input id="student-grade" type="text" maxlength="40" placeholder="e.g. Grade 2 or 2A" />
+          </label>
+        </div>
+        <div class="field-row">
           <label class="field">
             <span>Date</span>
             <input id="doc-date" type="date" />
@@ -33961,13 +33973,16 @@ function shuffle(arr) {
  * the same word on both copies - shuffling once here, rather than
  * separately per role, is what keeps that true.
  *
- * `limits` optionally caps how many words to take from a category (its
- * first N, in spreadsheet order, before shuffling) - e.g.
- * { "c01-letters-3x": 26 } to test fewer than the category's full word
- * count. Categories not present in `limits`, or with a limit at/above the
- * category's full count, use every word as before.
+ * `filters` optionally excludes specific words from a category - e.g.
+ * { "c01-letters-3x": ["א", "ב"] } to test every letter except alef and
+ * bet. A category's exact text match is excluded everywhere it occurs
+ * (e.g. all 3 repetitions of a letter in "Letters (3x)"), which lets a
+ * teacher pick exactly which letters/words within a category to test.
+ * Categories not present in `filters`, or whose filter would exclude every
+ * word, use every word as before (excluding everything isn't a meaningful
+ * choice - the checkbox for the whole category exists for that).
  */
-function assemble(categoryIds, limits = {}) {
+function assemble(categoryIds, filters = {}) {
   if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
     throw new InvalidSelectionError("Select at least one category.");
   }
@@ -33983,25 +33998,26 @@ function assemble(categoryIds, limits = {}) {
     throw new InvalidSelectionError(`Unknown category id(s): ${missing.join(", ")}`);
   }
 
-  const summary = selected.map((cat, index) => {
+  const filtered = selected.map((cat, index) => {
     const categoryNumber = index + 1;
-    const limit = limits[cat.id];
-    const count =
-      Number.isInteger(limit) && limit > 0 && limit < cat.words.length
-        ? limit
-        : cat.words.length;
-    return { categoryNumber, categoryId: cat.id, categoryName: cat.name, count };
+    const excluded = filters[cat.id];
+    const kept =
+      Array.isArray(excluded) && excluded.length
+        ? cat.words.filter((w) => !excluded.includes(w))
+        : cat.words;
+    const wordList = kept.length > 0 ? kept : cat.words;
+    return { categoryNumber, categoryId: cat.id, categoryName: cat.name, wordList };
   });
 
-  const words = selected.flatMap((cat, index) => {
-    const categoryNumber = index + 1;
-    const limit = limits[cat.id];
-    const wordList =
-      Number.isInteger(limit) && limit > 0 && limit < cat.words.length
-        ? cat.words.slice(0, limit)
-        : cat.words;
-    return wordList.map((text) => ({ text, categoryNumber }));
-  });
+  const summary = filtered.map((f) => ({
+    categoryNumber: f.categoryNumber,
+    categoryName: f.categoryName,
+    count: f.wordList.length,
+  }));
+
+  const words = filtered.flatMap((f) =>
+    f.wordList.map((text) => ({ text, categoryNumber: f.categoryNumber }))
+  );
   shuffle(words);
   words.forEach((w, i) => {
     w.rowNumber = i + 1;
@@ -34117,6 +34133,7 @@ function renderWordGrid(words, role, columns) {
 function renderMetaFields(role, meta) {
   const fields = [
     { label: "Student Name", value: meta.studentName ? escapeHtml(meta.studentName) : "" },
+    { label: "Grade / Class", value: meta.grade ? escapeHtml(meta.grade) : "" },
     { label: "Date", value: meta.date ? escapeHtml(meta.date) : "" },
   ];
   if (role === "teacher") {
@@ -34434,6 +34451,7 @@ function titleBlock(title, roleLabel) {
 function metaFieldsTable(role, meta, usableWidth) {
   const fields = [
     { label: "Student Name", value: meta.studentName || "" },
+    { label: "Grade / Class", value: meta.grade || "" },
     { label: "Date", value: meta.date || "" },
   ];
   if (role === "teacher") {
@@ -34806,6 +34824,7 @@ function updateFavicon(dataUrl) {
   const el = {
     title: document.getElementById("doc-title"),
     studentName: document.getElementById("student-name"),
+    grade: document.getElementById("student-grade"),
     date: document.getElementById("doc-date"),
     columns: document.getElementById("columns"),
     orientation: document.getElementById("orientation"),
@@ -34945,38 +34964,38 @@ function updateFavicon(dataUrl) {
       row.append(checkbox, name, count, badge);
       item.appendChild(row);
 
-      // A limit only makes sense when there's more than one word to trim
-      // down from - e.g. "Letters (3x)" has every letter 3 times, and a
-      // teacher may only want to test some of them.
-      if (cat.count > 1) {
-        const limitRow = document.createElement("div");
-        limitRow.className = "cat-limit-row";
-        limitRow.hidden = true;
+      // Let a teacher pick exactly which words in this category to test -
+      // e.g. "Letters (3x)" repeats every letter 3 times, and only some of
+      // those letters may need testing. Only worth offering when there's
+      // more than one distinct word/letter to choose between.
+      const uniqueWords = [...new Set(cat.words)];
+      if (uniqueWords.length > 1) {
+        const pickerRow = document.createElement("div");
+        pickerRow.className = "cat-picker-row";
+        pickerRow.hidden = true;
 
-        const limitLabel = document.createElement("span");
-        limitLabel.textContent = "Use only";
-
-        const limitInput = document.createElement("input");
-        limitInput.type = "number";
-        limitInput.className = "cat-limit";
-        limitInput.min = "1";
-        limitInput.max = String(cat.count);
-        limitInput.value = String(cat.count);
-        limitInput.addEventListener("change", () => {
-          let n = Math.round(Number(limitInput.value));
-          if (!Number.isFinite(n) || n < 1) n = 1;
-          if (n > cat.count) n = cat.count;
-          limitInput.value = String(n);
-        });
-
-        const limitSuffix = document.createElement("span");
-        limitSuffix.textContent = `of ${cat.count} words`;
-
-        limitRow.append(limitLabel, limitInput, limitSuffix);
-        item.appendChild(limitRow);
+        for (const word of uniqueWords) {
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "word-chip active";
+          chip.textContent = word;
+          chip.dataset.word = word;
+          chip.setAttribute("aria-pressed", "true");
+          chip.title = "Click to exclude from this assessment";
+          chip.addEventListener("click", () => {
+            const chips = pickerRow.querySelectorAll(".word-chip");
+            const activeCount = Array.from(chips).filter((c) => c.classList.contains("active")).length;
+            if (chip.classList.contains("active") && activeCount <= 1) return; // keep at least one word active
+            const active = chip.classList.toggle("active");
+            chip.setAttribute("aria-pressed", String(active));
+            updatePreview();
+          });
+          pickerRow.appendChild(chip);
+        }
+        item.appendChild(pickerRow);
 
         checkbox.addEventListener("change", () => {
-          limitRow.hidden = !checkbox.checked;
+          pickerRow.hidden = !checkbox.checked;
         });
       }
 
@@ -34984,20 +35003,19 @@ function updateFavicon(dataUrl) {
     }
   }
 
-  /** Reads each checked category's "use only N" input (if any narrower
-   * than its full word count) into a { categoryId: limit } map for
-   * assemble(). Categories left at their full count are omitted, which
+  /** Reads each checked category's word-picker chips into a
+   * { categoryId: [excludedWord, ...] } map for assemble(). A category
+   * with every chip still active (the default) is omitted, which
    * assemble() also treats as "use every word" - either way is fine. */
-  function getCategoryLimits() {
-    const limits = {};
+  function getCategoryFilters() {
+    const filters = {};
     for (const item of el.categoryList.querySelectorAll(".category-item")) {
       const checkbox = item.querySelector("input[type=checkbox]");
-      const limitInput = item.querySelector(".cat-limit");
-      if (!checkbox.checked || !limitInput) continue;
-      const n = Math.round(Number(limitInput.value));
-      if (Number.isFinite(n) && n > 0) limits[checkbox.value] = n;
+      if (!checkbox.checked) continue;
+      const excluded = Array.from(item.querySelectorAll(".word-chip:not(.active)")).map((chip) => chip.dataset.word);
+      if (excluded.length) filters[checkbox.value] = excluded;
     }
-    return limits;
+    return filters;
   }
 
   function setImportStatus(message, kind) {
@@ -35102,6 +35120,7 @@ function updateFavicon(dataUrl) {
     return {
       title: el.title.value.trim() || undefined,
       studentName: el.studentName.value.trim(),
+      grade: el.grade.value.trim(),
       date: el.date.value.trim(),
       columns: Number(el.columns.value) || 4,
       orientation: el.orientation.value === "landscape" ? "landscape" : "portrait",
@@ -35134,7 +35153,7 @@ function updateFavicon(dataUrl) {
     }
 
     try {
-      const assembled = assemble(categoryIds, getCategoryLimits());
+      const assembled = assemble(categoryIds, getCategoryFilters());
       const html = buildHtml({ role: state.previewRole, assembled, meta: buildMeta() });
       el.previewFrame.srcdoc = html;
       el.previewFrame.hidden = false;
@@ -35164,7 +35183,7 @@ function updateFavicon(dataUrl) {
 
   function printDocument(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds, getCategoryLimits());
+    const assembled = assemble(categoryIds, getCategoryFilters());
     const meta = buildMeta();
     const html = buildHtml({ role, assembled, meta });
 
@@ -35179,7 +35198,7 @@ function updateFavicon(dataUrl) {
 
   async function downloadWord(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds, getCategoryLimits());
+    const assembled = assemble(categoryIds, getCategoryFilters());
     const meta = buildMeta();
     const blob = await renderDocx({ role, assembled, meta });
     const filename = filenameFor({ title: meta.title, role, format: "docx", date: meta.date });
@@ -35258,7 +35277,7 @@ function updateFavicon(dataUrl) {
     applyWordBank(JSON.parse(JSON.stringify(DEFAULT_CATEGORIES_DATA)));
     setImportStatus("Reset to the default word bank.", "success");
   });
-  [el.title, el.studentName, el.date, el.columns].forEach((input) => input.addEventListener("input", updatePreview));
+  [el.title, el.studentName, el.grade, el.date, el.columns].forEach((input) => input.addEventListener("input", updatePreview));
   el.orientation.addEventListener("change", updatePreview);
   document.querySelectorAll('input[name="format"]').forEach((r) =>
     r.addEventListener("change", () => {
