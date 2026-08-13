@@ -10,12 +10,32 @@ __FONT_FACE_CSS__
 </style>
 </head>
 <body>
+  <div id="auth-gate" class="auth-gate">
+    <form id="auth-form" class="auth-card">
+      <span class="mark">קריאה</span>
+      <h1>Kriah Assessment Builder</h1>
+      <p class="auth-tagline">Ganeinu Academy reading diagnostics</p>
+      <label class="field">
+        <span>Passcode</span>
+        <input type="password" id="auth-passcode" autocomplete="off" autofocus />
+      </label>
+      <button type="submit" class="btn btn-primary">Enter</button>
+      <p id="auth-error" class="status-message error" hidden>Incorrect passcode.</p>
+    </form>
+  </div>
+
+  <div id="app-shell" hidden>
   <header class="app-header">
     <div class="brand">
-      <span class="mark">קריאה</span>
+      <span class="mark-slot" id="mark-slot"><span class="mark">קריאה</span></span>
       <span class="brand-text">
         <span class="word">Kriah Assessment Builder</span>
         <span class="tagline">Ganeinu Academy reading diagnostics</span>
+        <label class="logo-upload-link" id="logo-upload-label">
+          + Add school logo
+          <input type="file" id="logo-file" accept="image/*" hidden />
+        </label>
+        <span id="logo-status" class="logo-status" hidden></span>
       </span>
     </div>
     <span class="header-meta" id="header-meta">Loading…</span>
@@ -67,6 +87,17 @@ __FONT_FACE_CSS__
         <div id="category-list" class="category-list" aria-live="polite">
           <p class="loading">Loading categories…</p>
         </div>
+        <div class="source-row">
+          <span id="source-label" class="source-label">Using: Ganeinu Academy default</span>
+          <div class="btn-group">
+            <label class="btn-link file-btn">
+              Import spreadsheet…
+              <input type="file" id="import-file" accept=".xlsx" hidden />
+            </label>
+            <button type="button" id="reset-source" class="btn-link" hidden>Reset to default</button>
+          </div>
+        </div>
+        <p id="import-status" class="status-message" role="status"></p>
       </div>
 
       <div class="card">
@@ -119,9 +150,13 @@ __FONT_FACE_CSS__
   </footer>
 
   <iframe id="print-frame" title="Print" style="position:absolute; width:0; height:0; border:0; visibility:hidden;"></iframe>
+  </div>
 
 <script>
 __DOCX_LIB__
+</script>
+<script>
+__XLSX_LIB__
 </script>
 <script>
 __APP_SCRIPT__

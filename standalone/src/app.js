@@ -1,3 +1,60 @@
+// Soft deterrent, not real security: the whole page - including this hash -
+// ships to the browser, so anyone reading the source can find the passcode.
+// It just keeps the link from being casually stumbled into. To change it,
+// edit AUTH_PASSCODE in scripts/build-standalone.js and rebuild; leaving it
+// blank there removes this gate entirely.
+(function initAuthGate() {
+  const gate = document.getElementById("auth-gate");
+  const shell = document.getElementById("app-shell");
+  const STORAGE_KEY = "kriah-auth-hash";
+
+  function unlock() {
+    gate.hidden = true;
+    shell.hidden = false;
+  }
+
+  if (!AUTH_PASSCODE_HASH) {
+    unlock();
+    return;
+  }
+
+  async function sha256Hex(text) {
+    const bytes = new TextEncoder().encode(text);
+    const digest = await crypto.subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  try {
+    if (localStorage.getItem(STORAGE_KEY) === AUTH_PASSCODE_HASH) {
+      unlock();
+      return;
+    }
+  } catch (err) {
+    // localStorage unavailable - fall through to asking every time.
+  }
+
+  const form = document.getElementById("auth-form");
+  const input = document.getElementById("auth-passcode");
+  const error = document.getElementById("auth-error");
+  input.focus();
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const hash = await sha256Hex(input.value);
+    if (hash === AUTH_PASSCODE_HASH) {
+      try {
+        localStorage.setItem(STORAGE_KEY, hash);
+      } catch (err) {
+        // Can't persist - they'll just need to re-enter it next visit.
+      }
+      unlock();
+    } else {
+      error.hidden = false;
+      input.value = "";
+      input.focus();
+    }
+  });
+})();
+
 (() => {
   // Section dividers for the category list, keyed by each category's
   // canonical order (from categories.json) - a light scanning aid that
@@ -11,8 +68,6 @@
     21: "Shared Dot",
     22: "Word Endings",
   };
-
-  const state = { previewRole: "teacher" };
 
   const el = {
     title: document.getElementById("doc-title"),
@@ -32,7 +87,75 @@
     printFrame: document.getElementById("print-frame"),
     headerMeta: document.getElementById("header-meta"),
     tabs: Array.from(document.querySelectorAll(".preview-tabs .tab")),
+    importFile: document.getElementById("import-file"),
+    resetSource: document.getElementById("reset-source"),
+    sourceLabel: document.getElementById("source-label"),
+    importStatus: document.getElementById("import-status"),
+    markSlot: document.getElementById("mark-slot"),
+    logoFile: document.getElementById("logo-file"),
+    logoUploadLabel: document.getElementById("logo-upload-label"),
+    logoStatus: document.getElementById("logo-status"),
   };
+
+  // ---- School logo (self-service, one-time upload) ----
+  const LOGO_STORAGE_KEY = "kriah-school-logo";
+  const MAX_LOGO_BYTES = 3 * 1024 * 1024; // 3MB - localStorage's quota is a few MB total
+
+  function setLogoStatus(message, kind) {
+    el.logoStatus.textContent = message || "";
+    el.logoStatus.hidden = !message;
+    el.logoStatus.classList.remove("error", "success");
+    if (kind) el.logoStatus.classList.add(kind);
+  }
+
+  function showLogo(dataUrl) {
+    el.markSlot.innerHTML = "";
+    const img = document.createElement("img");
+    img.className = "brand-logo";
+    img.src = dataUrl;
+    img.alt = "School logo";
+    img.title = "Click to change logo";
+    img.addEventListener("click", () => el.logoFile.click());
+    el.markSlot.appendChild(img);
+    el.logoUploadLabel.hidden = true;
+  }
+
+  (function initLogo() {
+    try {
+      const saved = localStorage.getItem(LOGO_STORAGE_KEY);
+      if (saved) showLogo(saved);
+    } catch (err) {
+      // Storage unavailable - the upload button just stays available.
+    }
+  })();
+
+  el.logoFile.addEventListener("change", () => {
+    const file = el.logoFile.files[0];
+    el.logoFile.value = "";
+    if (!file) return;
+    if (file.size > MAX_LOGO_BYTES) {
+      setLogoStatus("That image is too large - try one under 3 MB.", "error");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result;
+      try {
+        localStorage.setItem(LOGO_STORAGE_KEY, dataUrl);
+      } catch (err) {
+        setLogoStatus("Saved for this visit only - the image was too large to keep permanently.");
+      }
+      showLogo(dataUrl);
+    };
+    reader.onerror = () => setLogoStatus("Couldn't read that image file.", "error");
+    reader.readAsDataURL(file);
+  });
+
+  // Snapshot of the built-in word bank, so "Reset to default" has something
+  // to restore after an import mutates CATEGORIES_DATA in place.
+  const DEFAULT_CATEGORIES_DATA = JSON.parse(JSON.stringify(CATEGORIES_DATA));
+  const WORD_BANK_STORAGE_KEY = "kriah-word-bank";
+  const state = { previewRole: "teacher", usingDefaultData: true };
 
   function todayIso() {
     const d = new Date();
@@ -42,13 +165,19 @@
   el.date.value = todayIso();
   el.title.value = CATEGORIES_DATA.title;
 
-  const totalWords = CATEGORIES_DATA.categories.reduce((sum, c) => sum + c.count, 0);
-  el.headerMeta.textContent = `${CATEGORIES_DATA.categories.length} categories · ${totalWords} words`;
+  function updateHeaderMeta() {
+    const totalWords = CATEGORIES_DATA.categories.reduce((sum, c) => sum + c.count, 0);
+    el.headerMeta.textContent = `${CATEGORIES_DATA.categories.length} categories · ${totalWords} words`;
+  }
+  updateHeaderMeta();
 
   function renderCategoryList() {
     el.categoryList.innerHTML = "";
     for (const cat of CATEGORIES_DATA.categories) {
-      if (GROUP_BREAKS[cat.order]) {
+      // The section dividers describe this specific curriculum's known
+      // structure, so only show them for the built-in word bank - an
+      // imported spreadsheet's categories won't match that structure.
+      if (state.usingDefaultData && GROUP_BREAKS[cat.order]) {
         const label = document.createElement("div");
         label.className = "group-label";
         label.textContent = GROUP_BREAKS[cat.order];
@@ -79,7 +208,80 @@
       el.categoryList.appendChild(row);
     }
   }
-  renderCategoryList();
+
+  function setImportStatus(message, kind) {
+    el.importStatus.textContent = message || "";
+    el.importStatus.classList.remove("error", "success");
+    if (kind) el.importStatus.classList.add(kind);
+  }
+
+  /** Swaps in a new word bank (from an import or a reset), refreshing
+   * everything that's derived from CATEGORIES_DATA. Mutates in place
+   * rather than reassigning, since CATEGORIES_DATA is a `const` shared
+   * with the assemble()/buildHtml() logic above. */
+  function applyWordBank(data, { sourceName, persist } = {}) {
+    CATEGORIES_DATA.title = data.title || CATEGORIES_DATA.title;
+    CATEGORIES_DATA.categories = data.categories;
+    state.usingDefaultData = !sourceName;
+
+    el.sourceLabel.textContent = sourceName ? `Using: ${sourceName}` : "Using: Ganeinu Academy default";
+    el.resetSource.hidden = !sourceName;
+
+    updateHeaderMeta();
+    renderCategoryList();
+    el.downloadTeacher.disabled = true;
+    el.downloadStudent.disabled = true;
+    setStatus("");
+    updatePreview();
+
+    if (persist) {
+      try {
+        localStorage.setItem(WORD_BANK_STORAGE_KEY, JSON.stringify({ data, sourceName }));
+      } catch (err) {
+        // Storage full/unavailable (e.g. private browsing) - the import
+        // still works for this page load, it just won't survive a reload.
+      }
+    }
+  }
+
+  // On load, prefer a word bank imported in an earlier session (saved to
+  // this browser only) over the one built into the page.
+  (function initWordBank() {
+    try {
+      const saved = localStorage.getItem(WORD_BANK_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.data && Array.isArray(parsed.data.categories) && parsed.data.categories.length) {
+          applyWordBank(parsed.data, { sourceName: parsed.sourceName, persist: false });
+          return;
+        }
+      }
+    } catch (err) {
+      // Corrupt/unreadable storage - fall through to the built-in word bank.
+    }
+    renderCategoryList();
+  })();
+
+  async function handleImportFile(file) {
+    setImportStatus("Reading spreadsheet…");
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array", cellDates: false });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: true });
+      const data = rowsToCategories(rows, { sourceSheet: sheetName, title: CATEGORIES_DATA.title });
+
+      if (!data.categories.length) {
+        throw new Error("No categories found - check the spreadsheet has headers in row 2 and words below them.");
+      }
+
+      applyWordBank(data, { sourceName: file.name, persist: true });
+      setImportStatus(`Imported ${data.categories.length} categories from ${file.name}.`, "success");
+    } catch (err) {
+      setImportStatus(err.message || "Couldn't read that file.", "error");
+    }
+  }
 
   function getSelectedCategoryIds() {
     return Array.from(el.categoryList.querySelectorAll("input[type=checkbox]:checked")).map((cb) => cb.value);
@@ -255,6 +457,16 @@
   });
   el.downloadTeacher.addEventListener("click", () => exportRole("teacher"));
   el.downloadStudent.addEventListener("click", () => exportRole("student"));
+  el.importFile.addEventListener("change", () => {
+    const file = el.importFile.files[0];
+    el.importFile.value = ""; // allow re-importing the same filename later
+    if (file) handleImportFile(file);
+  });
+  el.resetSource.addEventListener("click", () => {
+    localStorage.removeItem(WORD_BANK_STORAGE_KEY);
+    applyWordBank(JSON.parse(JSON.stringify(DEFAULT_CATEGORIES_DATA)));
+    setImportStatus("Reset to the default word bank.", "success");
+  });
   [el.title, el.studentName, el.date, el.columns].forEach((input) => input.addEventListener("input", updatePreview));
   el.orientation.addEventListener("change", updatePreview);
   document.querySelectorAll('input[name="format"]').forEach((r) =>

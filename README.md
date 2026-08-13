@@ -46,6 +46,33 @@ teacher/student rules) - see "How it's built" below.
 - Words per row (2-8) and page orientation (portrait/landscape) are both
   adjustable, to help fit a longer assessment onto one page.
 
+## Sign-in, your logo, and a custom word bank
+
+These three are features of the live site / standalone file only (not the
+`server/` app):
+
+- **Sign-in.** The site is behind a shared passcode (default: `ganeinu2026`),
+  remembered in the browser after it's entered once. This is a soft
+  deterrent, not real security - anyone who reads the page's source can find
+  it - it just keeps the link from being casually stumbled into. To set your
+  own passcode: edit `AUTH_PASSCODE` near the top of
+  `scripts/build-standalone.js`, run `npm run build-standalone`, commit and
+  push. Set it to `""` to remove the gate entirely.
+- **School logo.** Click "+ Add school logo" in the header (next to the
+  title) and pick an image - it replaces the קריאה mark, and the upload
+  button disappears once it's set. This is saved in your browser's local
+  storage, so it's per-browser/device, not shared with other visitors to the
+  live site; whoever manages the site would set it once on the device(s)
+  used to generate assessments. Click the logo itself to swap it for a
+  different image later.
+- **Custom word bank.** Under Word Bank, "Import spreadsheet…" lets you load
+  a different `.xlsx` file (same shape as `data/source/`: row 2 is category
+  headers, words below). Like the logo, this is saved to your browser only -
+  it doesn't change the live site for other visitors. "Reset to default"
+  goes back to the built-in Ganeinu word bank. To actually change the site's
+  default word bank for everyone, update `data/source/` and run
+  `npm run convert-data && npm run build-standalone` instead (see below).
+
 ## Running it
 
 Easiest: open `standalone/kriah-assessment-builder.html` in a browser.
