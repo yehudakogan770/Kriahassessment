@@ -191,6 +191,16 @@
     const blob = await renderDocx({ role, assembled, meta });
     const filename = filenameFor({ title: meta.title, role, format: "docx", date: meta.date });
 
+    // Published as a Claude Artifact, the page runs in a sandbox that
+    // silently ignores plain <a download>/blob-URL saves - offering the
+    // file has to go through this host-mediated save instead. Opened as a
+    // plain file (or self-hosted), there is no window.claude, so fall back
+    // to the normal browser download.
+    if (window.claude && window.claude.downloads) {
+      await window.claude.downloads.save({ filename, data: blob });
+      return filename;
+    }
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -221,7 +231,13 @@
         setStatus(`Downloaded ${filename}`, "success");
       }
     } catch (err) {
-      setStatus(err.message || "Something went wrong.", "error");
+      if (err && err.code === "declined") {
+        setStatus("Download cancelled.");
+      } else if (err && err.code === "extension_not_enabled") {
+        setStatus("Word downloads aren't enabled in this view - try the PDF option instead.", "error");
+      } else {
+        setStatus((err && err.message) || "Something went wrong.", "error");
+      }
     } finally {
       button.disabled = getSelectedCategoryIds().length === 0;
       button.textContent = originalText;

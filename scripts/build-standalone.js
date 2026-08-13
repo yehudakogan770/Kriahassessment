@@ -90,7 +90,17 @@ ${read("standalone/src/app.js")}
 }
 
 function main() {
-  const docxLib = read("node_modules/docx/dist/index.iife.js");
+  // docx's bundled UTF-8 stream decoder polyfill contains a literal
+  // U+FFFD (Unicode replacement) character as a string literal - its own
+  // fallback output for malformed byte sequences. Some artifact hosting
+  // validators reject any raw occurrence of that character, so swap it
+  // for the equivalent JS escape sequence: identical value at runtime,
+  // no literal U+FFFD byte in the source text.
+  const REPLACEMENT_CHAR = String.fromCharCode(0xfffd);
+  const docxLib = read("node_modules/docx/dist/index.iife.js").replace(
+    new RegExp(REPLACEMENT_CHAR, "g"),
+    "\\uFFFD"
+  );
   const styles = read("standalone/src/styles.css");
   const fontFaceCss = buildFontFaceCss();
   const appScript = buildAppScript();
