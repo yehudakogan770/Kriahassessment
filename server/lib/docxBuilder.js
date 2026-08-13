@@ -92,7 +92,7 @@ function metaFieldsTable(role, meta, usableWidth) {
     { label: "Date", value: meta.date || "" },
   ];
   if (role === "teacher") {
-    fields.push({ label: "Examiner", value: "" });
+    fields.push({ label: "Teacher", value: "" });
     fields.push({ label: "Reading Speed / Time", value: "" });
   }
 
@@ -256,46 +256,29 @@ function emptyCell(cellWidth) {
   });
 }
 
-function wordGridBlocks(groups, role, columns, usableWidth) {
+function wordGridBlocks(words, role, columns, usableWidth) {
+  // Teacher and Student share the same continuous table - no per-category
+  // headings, so a category's word count never leaves a ragged row of
+  // empty bordered cells before the next category. The Teacher copy still
+  // shows which category each word belongs to via the small superscript
+  // number wordCell() adds per word (see role in that function), and the
+  // Results Summary table above still lists every category by name.
   const cellWidth = Math.floor(usableWidth / columns);
-  const blocks = [];
+  const tier = sizeTier(words);
+  const rows = chunk(words, columns).map((rowWords) => {
+    const cells = rowWords.map((w) => wordCell(w, role, columns, tier, cellWidth));
+    while (cells.length < columns) cells.push(emptyCell(cellWidth));
+    return new TableRow({ cantSplit: true, children: cells });
+  });
 
-  for (const group of groups) {
-    if (role === "teacher") {
-      blocks.push(
-        new Paragraph({
-          bidirectional: true,
-          alignment: AlignmentType.RIGHT,
-          shading: { fill: "F1E9EA" },
-          spacing: { before: 100, after: 30 },
-          indent: { left: 100, right: 100 },
-          children: [
-            new TextRun({ text: String(group.categoryNumber), bold: true, color: ACCENT, size: 18, font: UI_FONT }),
-            new TextRun({ text: `  ${group.categoryName}  `, bold: true, size: 18, font: FONT }),
-            new TextRun({ text: `(${group.count} words)`, size: 14, color: GRAY, font: UI_FONT }),
-          ],
-        })
-      );
-    } else {
-      blocks.push(new Paragraph({ spacing: { before: 60 }, children: [] }));
-    }
-
-    const tier = sizeTier(group.words);
-    const rows = chunk(group.words, columns).map((rowWords) => {
-      const cells = rowWords.map((w) => wordCell(w, role, columns, tier, cellWidth));
-      while (cells.length < columns) cells.push(emptyCell(cellWidth));
-      return new TableRow({ cantSplit: true, children: cells });
-    });
-
-    blocks.push(
-      new Table({
-        width: { size: usableWidth, type: WidthType.DXA },
-        visuallyRightToLeft: true,
-        columnWidths: Array(columns).fill(cellWidth),
-        rows,
-      })
-    );
-  }
+  const blocks = [
+    new Table({
+      width: { size: usableWidth, type: WidthType.DXA },
+      visuallyRightToLeft: true,
+      columnWidths: Array(columns).fill(cellWidth),
+      rows,
+    }),
+  ];
 
   return blocks;
 }
@@ -319,7 +302,7 @@ function footer(title, roleLabel) {
 async function renderDocx({ role, assembled, meta = {} }) {
   const title = meta.title || "Kriah Reading Assessment";
   const columns = Math.min(Math.max(Number(meta.columns) || 3, 2), 8);
-  const roleLabel = role === "teacher" ? "Teacher / Examiner Copy" : "Student Copy";
+  const roleLabel = role === "teacher" ? "Teacher Copy" : "Student Copy";
   const orientation = meta.orientation === "landscape" ? "landscape" : "portrait";
   const usableWidth = usableWidthTwip(orientation);
 
@@ -333,7 +316,7 @@ async function renderDocx({ role, assembled, meta = {} }) {
     children.push(...resultsSummaryTable(assembled.summary, usableWidth));
   }
 
-  children.push(...wordGridBlocks(assembled.groups, role, columns, usableWidth));
+  children.push(...wordGridBlocks(assembled.words, role, columns, usableWidth));
 
   const doc = new Document({
     title: `${title} - ${roleLabel}`,

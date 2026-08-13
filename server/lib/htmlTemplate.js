@@ -80,28 +80,21 @@ function renderWordCell(word, role) {
         </div>`;
 }
 
-function renderWordGrid(groups, role, columns) {
-  const tier = sizeTier(groups.flatMap((g) => g.words));
-  const blocks = groups
-    .map((group) => {
-      const heading =
-        role === "teacher"
-          ? `<div class="cat-heading"><span class="cat-badge">${group.categoryNumber}</span> ${escapeHtml(
-              group.categoryName
-            )} <span class="cat-count">(${group.count} word${group.count === 1 ? "" : "s"})</span></div>`
-          : "";
-      const cells = group.words.map((w) => renderWordCell(w, role)).join("\n");
-      return `
-    <div class="cat-block tier-${tier}">
-      ${heading}
+function renderWordGrid(words, role, columns) {
+  // Teacher and Student share the same continuous grid - no per-category
+  // grouping or headings, so a category's word count never leaves a
+  // ragged, empty-looking gap before the next category. The Teacher copy
+  // still shows which category each word belongs to via the small corner
+  // badge renderWordCell() adds per word (see role in that function), and
+  // the Results Summary table above still lists every category by name.
+  const tier = sizeTier(words);
+  const cells = words.map((w) => renderWordCell(w, role)).join("\n");
+  return `
+    <section class="word-grid tier-${tier}">
       <div class="grid" style="grid-template-columns: repeat(${columns}, 1fr);">
         ${cells}
       </div>
-    </div>`;
-    })
-    .join("\n");
-
-  return `<section class="word-grid">${blocks}</section>`;
+    </section>`;
 }
 
 function renderMetaFields(role, meta) {
@@ -110,7 +103,7 @@ function renderMetaFields(role, meta) {
     { label: "Date", value: meta.date ? escapeHtml(meta.date) : "" },
   ];
   if (role === "teacher") {
-    fields.push({ label: "Examiner", value: "" });
+    fields.push({ label: "Teacher", value: "" });
     fields.push({ label: "Reading Speed / Time", value: "" });
   }
 
@@ -245,25 +238,6 @@ function css() {
     }
 
     .word-grid { }
-    .cat-block { margin-bottom: 6px; }
-    .cat-heading {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      font-size: 10pt;
-      font-weight: 600;
-      background: #f1e9ea;
-      border-radius: 4px;
-      padding: 2px 8px;
-      margin-bottom: 3px;
-      page-break-after: avoid;
-    }
-    .cat-heading .cat-count {
-      font-weight: 400;
-      color: #555;
-      font-size: 8.5pt;
-    }
 
     .grid {
       display: grid;
@@ -319,16 +293,13 @@ function css() {
     .tier-sm .cell { min-height: 28pt; }
     .tier-sm .word-text { font-size: clamp(9.5pt, 11cqw, 15pt); }
 
-    @media print {
-      .cat-block { break-inside: auto; }
-    }
   `;
 }
 
 function buildHtml({ role, assembled, meta = {} }) {
   const title = meta.title ? escapeHtml(meta.title) : "Kriah Reading Assessment";
   const columns = Math.min(Math.max(Number(meta.columns) || 3, 2), 8);
-  const roleLabel = role === "teacher" ? "Teacher / Examiner Copy" : "Student Copy";
+  const roleLabel = role === "teacher" ? "Teacher Copy" : "Student Copy";
   const orientation = meta.orientation === "landscape" ? "landscape" : "portrait";
 
   return `<!DOCTYPE html>
@@ -350,7 +321,7 @@ function buildHtml({ role, assembled, meta = {} }) {
   ${renderMetaFields(role, meta)}
   ${role === "teacher" ? renderInstructions() : ""}
   ${role === "teacher" ? renderResultsSummary(assembled.summary) : ""}
-  ${renderWordGrid(assembled.groups, role, columns)}
+  ${renderWordGrid(assembled.words, role, columns)}
 </body>
 </html>`;
 }

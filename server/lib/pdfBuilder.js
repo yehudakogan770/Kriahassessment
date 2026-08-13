@@ -21,7 +21,7 @@ async function renderPdf({ role, assembled, meta = {} }) {
     await page.setContent(html, { waitUntil: "networkidle0" });
 
     const title = meta.title || "Kriah Reading Assessment";
-    const roleLabel = role === "teacher" ? "Teacher / Examiner Copy" : "Student Copy";
+    const roleLabel = role === "teacher" ? "Teacher Copy" : "Student Copy";
 
     const pdfBytes = await page.pdf({
       format: "Letter",

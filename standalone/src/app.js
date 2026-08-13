@@ -19,9 +19,9 @@ function updateFavicon(dataUrl) {
   try {
     dataUrl = localStorage.getItem(LOGO_STORAGE_KEY);
   } catch (err) {
-    return; // Storage unavailable - the mark/favicon just stay default.
+    dataUrl = null; // Storage unavailable - fall through to the built-in default.
   }
-  if (!dataUrl) return;
+  dataUrl = dataUrl || DEFAULT_LOGO_DATA_URL;
   updateFavicon(dataUrl);
   const authMark = document.querySelector("#auth-form .mark");
   if (authMark) {
@@ -156,12 +156,13 @@ function updateFavicon(dataUrl) {
   }
 
   (function initLogo() {
+    let saved = null;
     try {
-      const saved = localStorage.getItem(LOGO_STORAGE_KEY);
-      if (saved) showLogo(saved);
+      saved = localStorage.getItem(LOGO_STORAGE_KEY);
     } catch (err) {
-      // Storage unavailable - the upload button just stays available.
+      // Storage unavailable - fall through to the built-in default.
     }
+    showLogo(saved || DEFAULT_LOGO_DATA_URL);
   })();
 
   el.logoFile.addEventListener("change", () => {
