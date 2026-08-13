@@ -23,7 +23,7 @@ const OUT_PATH = path.join(ROOT, "standalone", "kriah-assessment-builder.html");
 // auth - see the comment on initAuthGate in standalone/src/app.js for what
 // that does and doesn't protect against). Change this and rebuild to set a
 // new passcode; set to "" to remove the gate entirely.
-const AUTH_PASSCODE = "ganeinu2026";
+const AUTH_PASSCODE = "ganeinu";
 
 function read(relPath) {
   return fs.readFileSync(path.join(ROOT, relPath), "utf-8");

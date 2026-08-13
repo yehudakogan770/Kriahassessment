@@ -115,7 +115,7 @@ function renderMetaFields(role, meta) {
   }
 
   return `
-  <div class="meta-fields">
+  <div class="meta-fields" dir="ltr">
     ${fields
       .map(
         (f) => `
@@ -173,6 +173,8 @@ function css() {
     }
 
     .meta-fields {
+      direction: ltr;
+      text-align: left;
       display: flex;
       flex-wrap: wrap;
       gap: 6px 22px;

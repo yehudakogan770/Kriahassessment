@@ -51,7 +51,7 @@ teacher/student rules) - see "How it's built" below.
 These three are features of the live site / standalone file only (not the
 `server/` app):
 
-- **Sign-in.** The site is behind a shared passcode (default: `ganeinu2026`),
+- **Sign-in.** The site is behind a shared passcode (default: `ganeinu`),
   remembered in the browser after it's entered once. This is a soft
   deterrent, not real security - anyone who reads the page's source can find
   it - it just keeps the link from being casually stumbled into. To set your
