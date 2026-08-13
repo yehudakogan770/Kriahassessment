@@ -1,16 +1,20 @@
 # Kriah Reading Assessment Generator
 
+**Live: https://yehudakogan770.github.io/Kriahassessment/**
+
 A website for building Hebrew reading (kriah) assessment sheets from the
 Ganeinu Academy word bank. Pick which skill categories to test, and generate
 matching **Teacher** and **Student** documents as PDF or Word.
 
-There are two ways to use it:
+There are three ways to use it:
 
+- **The live site above** - published straight from this repo via GitHub
+  Pages (see `.github/workflows/deploy-pages.yml`); redeploys automatically
+  whenever `standalone/kriah-assessment-builder.html` changes on `main`.
 - **`standalone/kriah-assessment-builder.html`** - open this file directly in
   a browser (double-click it, or drag it into a browser tab). No install, no
-  server, works offline. This is the one to send someone who just wants to
-  use the tool. PDF export opens the browser's print dialog ("Save as PDF");
-  Word downloads directly.
+  server, works offline - same page as the live site, just local. PDF export
+  opens the browser's print dialog ("Save as PDF"); Word downloads directly.
 - **The `server/` app** - `npm install && npm start`, for self-hosting. PDF
   downloads are generated directly (no print dialog) since it renders with a
   real headless Chromium server-side.
