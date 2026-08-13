@@ -81,9 +81,9 @@ function renderWordCell(word, role) {
 }
 
 function renderWordGrid(groups, role, columns) {
+  const tier = sizeTier(groups.flatMap((g) => g.words));
   const blocks = groups
     .map((group) => {
-      const tier = sizeTier(group.words);
       const heading =
         role === "teacher"
           ? `<div class="cat-heading"><span class="cat-badge">${group.categoryNumber}</span> ${escapeHtml(
