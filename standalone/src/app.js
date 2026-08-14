@@ -91,6 +91,34 @@ function updateFavicon(dataUrl) {
 })();
 
 (() => {
+  // Sorts words/letters into standard Hebrew alphabetical order for the
+  // word-picker chips, rather than the word bank's own (effectively
+  // arbitrary) spreadsheet order. Keyed off each word's first character,
+  // so single letters (the common case - e.g. "Letters (3x)") sort
+  // exactly right, and multi-letter words at least sort by their
+  // opening letter. Final forms (ך ם ן ף ץ) sort right after their
+  // regular counterpart rather than off at the alphabet's end, and a
+  // dagesh/shin-dot/sin-dot combining mark (the 2nd character, when
+  // present) is a secondary key so e.g. כ and כּ sit next to each other.
+  const HEBREW_LETTER_ORDER = "אבגדהוזחטיכלמנסעפצקרשת";
+  const HEBREW_FINAL_TO_REGULAR = { "ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ" };
+  function hebrewWordSortKey(word) {
+    const first = word[0] || "";
+    const base = HEBREW_FINAL_TO_REGULAR[first] || first;
+    const primary = HEBREW_LETTER_ORDER.indexOf(base);
+    const isFinal = HEBREW_FINAL_TO_REGULAR[first] ? 1 : 0;
+    const markCode = word.codePointAt(1) || 0;
+    return [primary === -1 ? 999 : primary, isFinal, markCode];
+  }
+  function compareHebrew(a, b) {
+    const ka = hebrewWordSortKey(a);
+    const kb = hebrewWordSortKey(b);
+    for (let i = 0; i < ka.length; i++) {
+      if (ka[i] !== kb[i]) return ka[i] - kb[i];
+    }
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+
   // Section dividers for the category list, keyed by each category's
   // canonical order (from categories.json) - a light scanning aid that
   // mirrors the word bank's own sequence rather than an invented taxonomy.
@@ -247,12 +275,50 @@ function updateFavicon(dataUrl) {
       row.append(checkbox, name, count, badge);
       item.appendChild(row);
 
-      // Let a teacher pick exactly which words in this category to test -
-      // e.g. "Letters (3x)" repeats every letter 3 times, and only some of
-      // those letters may need testing. Only worth offering when there's
-      // more than one distinct word/letter to choose between.
-      const uniqueWords = [...new Set(cat.words)];
+      // Two optional ways to narrow this category down from its full word
+      // list - only worth offering when there's more than one distinct
+      // word/letter, otherwise there's nothing to narrow.
+      const uniqueWords = [...new Set(cat.words)].sort(compareHebrew);
       if (uniqueWords.length > 1) {
+        // The original approach: just cap how many words to use (the
+        // first N in spreadsheet order), without caring which specific
+        // ones. Left blank, the category behaves exactly as it always
+        // has - every word included.
+        const limitRow = document.createElement("div");
+        limitRow.className = "cat-limit-row";
+        limitRow.hidden = true;
+
+        const limitLabel = document.createElement("span");
+        limitLabel.textContent = "Or just use the first";
+
+        const limitInput = document.createElement("input");
+        limitInput.type = "number";
+        limitInput.className = "cat-limit";
+        limitInput.min = "1";
+        limitInput.max = String(cat.count);
+        limitInput.placeholder = "all";
+        limitInput.addEventListener("change", () => {
+          if (limitInput.value === "") { updatePreview(); return; }
+          let n = Math.round(Number(limitInput.value));
+          if (!Number.isFinite(n) || n < 1) n = 1;
+          if (n > cat.count) n = cat.count;
+          limitInput.value = String(n);
+          updatePreview();
+        });
+
+        const limitSuffix = document.createElement("span");
+        limitSuffix.textContent = `of ${cat.count} words`;
+
+        limitRow.append(limitLabel, limitInput, limitSuffix);
+        item.appendChild(limitRow);
+
+        // The newer approach: pick exactly which words/letters to
+        // include - e.g. "Letters (3x)" repeats every letter 3 times,
+        // and only some of those letters may need testing. Chips start
+        // unselected (the whole category is still used, untouched - see
+        // getCategoryFilters()); clicking a chip *adds* it to the
+        // assessment rather than starting from everything and removing
+        // ones you don't want.
         const pickerRow = document.createElement("div");
         pickerRow.className = "cat-picker-row";
         pickerRow.hidden = true;
@@ -260,15 +326,12 @@ function updateFavicon(dataUrl) {
         for (const word of uniqueWords) {
           const chip = document.createElement("button");
           chip.type = "button";
-          chip.className = "word-chip active";
+          chip.className = "word-chip";
           chip.textContent = word;
           chip.dataset.word = word;
-          chip.setAttribute("aria-pressed", "true");
-          chip.title = "Click to exclude from this assessment";
+          chip.setAttribute("aria-pressed", "false");
+          chip.title = "Click to include only this (and other selected) word/letter";
           chip.addEventListener("click", () => {
-            const chips = pickerRow.querySelectorAll(".word-chip");
-            const activeCount = Array.from(chips).filter((c) => c.classList.contains("active")).length;
-            if (chip.classList.contains("active") && activeCount <= 1) return; // keep at least one word active
             const active = chip.classList.toggle("active");
             chip.setAttribute("aria-pressed", String(active));
             updatePreview();
@@ -278,6 +341,7 @@ function updateFavicon(dataUrl) {
         item.appendChild(pickerRow);
 
         checkbox.addEventListener("change", () => {
+          limitRow.hidden = !checkbox.checked;
           pickerRow.hidden = !checkbox.checked;
         });
       }
@@ -286,17 +350,22 @@ function updateFavicon(dataUrl) {
     }
   }
 
-  /** Reads each checked category's word-picker chips into a
-   * { categoryId: [excludedWord, ...] } map for assemble(). A category
-   * with every chip still active (the default) is omitted, which
-   * assemble() also treats as "use every word" - either way is fine. */
+  /** Reads each checked category's word-picker chips and "use only N"
+   * input into a { categoryId: { include: [...], limit: N } } map for
+   * assemble(). A category left untouched (no chips selected, no limit
+   * set) is omitted, which assemble() also treats as "use every word" -
+   * either way produces identical output. */
   function getCategoryFilters() {
     const filters = {};
     for (const item of el.categoryList.querySelectorAll(".category-item")) {
       const checkbox = item.querySelector("input[type=checkbox]");
       if (!checkbox.checked) continue;
-      const excluded = Array.from(item.querySelectorAll(".word-chip:not(.active)")).map((chip) => chip.dataset.word);
-      if (excluded.length) filters[checkbox.value] = excluded;
+      const include = Array.from(item.querySelectorAll(".word-chip.active")).map((chip) => chip.dataset.word);
+      const limitInput = item.querySelector(".cat-limit");
+      const limit = limitInput && limitInput.value !== "" ? Math.round(Number(limitInput.value)) : undefined;
+      if (include.length || (Number.isInteger(limit) && limit > 0)) {
+        filters[checkbox.value] = { include, limit };
+      }
     }
     return filters;
   }

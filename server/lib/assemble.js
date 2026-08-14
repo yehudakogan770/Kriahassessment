@@ -25,14 +25,18 @@ function shuffle(arr) {
  * the same word on both copies - shuffling once here, rather than
  * separately per role, is what keeps that true.
  *
- * `filters` optionally excludes specific words from a category - e.g.
- * { "c01-letters-3x": ["א", "ב"] } to test every letter except alef and
- * bet. A category's exact text match is excluded everywhere it occurs
- * (e.g. all 3 repetitions of a letter in "Letters (3x)"), which lets a
- * teacher pick exactly which letters/words within a category to test.
- * Categories not present in `filters`, or whose filter would exclude every
- * word, use every word as before (excluding everything isn't a meaningful
- * choice - the checkbox for the whole category exists for that).
+ * `filters` optionally narrows down a category's words two ways, which
+ * can be combined - e.g. { "c01-letters-3x": { include: ["א", "ב"], limit: 10 } }:
+ *   - `include`: specific words/letters to use, and nothing else (every
+ *     occurrence of each - e.g. all 3 repetitions of a letter in
+ *     "Letters (3x)") - for picking exactly which ones to test. Leaving
+ *     it empty (nothing picked) means no restriction - every word.
+ *   - `limit`: caps how many words to use (the first N, in spreadsheet
+ *     order, after the include filter) when a teacher just wants fewer
+ *     words and doesn't care which ones - the original, simpler way to
+ *     narrow a category down, kept alongside the newer per-word picker.
+ * Categories not present in `filters`, or with an empty `include`, use
+ * every word as before.
  */
 function assemble(categoryIds, filters = {}) {
   if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
@@ -52,12 +56,13 @@ function assemble(categoryIds, filters = {}) {
 
   const filtered = selected.map((cat, index) => {
     const categoryNumber = index + 1;
-    const excluded = filters[cat.id];
-    const kept =
-      Array.isArray(excluded) && excluded.length
-        ? cat.words.filter((w) => !excluded.includes(w))
-        : cat.words;
-    const wordList = kept.length > 0 ? kept : cat.words;
+    const f = filters[cat.id] || {};
+    const include = Array.isArray(f.include) ? f.include : [];
+    const kept = include.length ? cat.words.filter((w) => include.includes(w)) : cat.words;
+    let wordList = kept.length > 0 ? kept : cat.words;
+    if (Number.isInteger(f.limit) && f.limit > 0 && f.limit < wordList.length) {
+      wordList = wordList.slice(0, f.limit);
+    }
     return { categoryNumber, categoryId: cat.id, categoryName: cat.name, wordList };
   });
 

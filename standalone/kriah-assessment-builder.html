@@ -319,12 +319,32 @@ button:focus-visible, .tab:focus-visible, .radio-pill:has(input:focus-visible) {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
+.cat-limit-row[hidden] { display: none; }
+.cat-limit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px 2px 33px;
+  background: var(--surface);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.cat-limit {
+  width: 46px;
+  font-size: 12px;
+  padding: 3px 5px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--ink);
+}
 .cat-picker-row[hidden] { display: none; }
 .cat-picker-row {
   display: flex;
   flex-wrap: wrap;
+  direction: rtl;
   gap: 5px;
-  padding: 8px 12px 10px 33px;
+  padding: 6px 33px 10px 12px;
   border-bottom: 1px solid var(--border-soft);
   background: var(--surface);
 }
@@ -33973,14 +33993,18 @@ function shuffle(arr) {
  * the same word on both copies - shuffling once here, rather than
  * separately per role, is what keeps that true.
  *
- * `filters` optionally excludes specific words from a category - e.g.
- * { "c01-letters-3x": ["א", "ב"] } to test every letter except alef and
- * bet. A category's exact text match is excluded everywhere it occurs
- * (e.g. all 3 repetitions of a letter in "Letters (3x)"), which lets a
- * teacher pick exactly which letters/words within a category to test.
- * Categories not present in `filters`, or whose filter would exclude every
- * word, use every word as before (excluding everything isn't a meaningful
- * choice - the checkbox for the whole category exists for that).
+ * `filters` optionally narrows down a category's words two ways, which
+ * can be combined - e.g. { "c01-letters-3x": { include: ["א", "ב"], limit: 10 } }:
+ *   - `include`: specific words/letters to use, and nothing else (every
+ *     occurrence of each - e.g. all 3 repetitions of a letter in
+ *     "Letters (3x)") - for picking exactly which ones to test. Leaving
+ *     it empty (nothing picked) means no restriction - every word.
+ *   - `limit`: caps how many words to use (the first N, in spreadsheet
+ *     order, after the include filter) when a teacher just wants fewer
+ *     words and doesn't care which ones - the original, simpler way to
+ *     narrow a category down, kept alongside the newer per-word picker.
+ * Categories not present in `filters`, or with an empty `include`, use
+ * every word as before.
  */
 function assemble(categoryIds, filters = {}) {
   if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
@@ -34000,12 +34024,13 @@ function assemble(categoryIds, filters = {}) {
 
   const filtered = selected.map((cat, index) => {
     const categoryNumber = index + 1;
-    const excluded = filters[cat.id];
-    const kept =
-      Array.isArray(excluded) && excluded.length
-        ? cat.words.filter((w) => !excluded.includes(w))
-        : cat.words;
-    const wordList = kept.length > 0 ? kept : cat.words;
+    const f = filters[cat.id] || {};
+    const include = Array.isArray(f.include) ? f.include : [];
+    const kept = include.length ? cat.words.filter((w) => include.includes(w)) : cat.words;
+    let wordList = kept.length > 0 ? kept : cat.words;
+    if (Number.isInteger(f.limit) && f.limit > 0 && f.limit < wordList.length) {
+      wordList = wordList.slice(0, f.limit);
+    }
     return { categoryNumber, categoryId: cat.id, categoryName: cat.name, wordList };
   });
 
@@ -34808,6 +34833,34 @@ function updateFavicon(dataUrl) {
 })();
 
 (() => {
+  // Sorts words/letters into standard Hebrew alphabetical order for the
+  // word-picker chips, rather than the word bank's own (effectively
+  // arbitrary) spreadsheet order. Keyed off each word's first character,
+  // so single letters (the common case - e.g. "Letters (3x)") sort
+  // exactly right, and multi-letter words at least sort by their
+  // opening letter. Final forms (ך ם ן ף ץ) sort right after their
+  // regular counterpart rather than off at the alphabet's end, and a
+  // dagesh/shin-dot/sin-dot combining mark (the 2nd character, when
+  // present) is a secondary key so e.g. כ and כּ sit next to each other.
+  const HEBREW_LETTER_ORDER = "אבגדהוזחטיכלמנסעפצקרשת";
+  const HEBREW_FINAL_TO_REGULAR = { "ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ" };
+  function hebrewWordSortKey(word) {
+    const first = word[0] || "";
+    const base = HEBREW_FINAL_TO_REGULAR[first] || first;
+    const primary = HEBREW_LETTER_ORDER.indexOf(base);
+    const isFinal = HEBREW_FINAL_TO_REGULAR[first] ? 1 : 0;
+    const markCode = word.codePointAt(1) || 0;
+    return [primary === -1 ? 999 : primary, isFinal, markCode];
+  }
+  function compareHebrew(a, b) {
+    const ka = hebrewWordSortKey(a);
+    const kb = hebrewWordSortKey(b);
+    for (let i = 0; i < ka.length; i++) {
+      if (ka[i] !== kb[i]) return ka[i] - kb[i];
+    }
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+
   // Section dividers for the category list, keyed by each category's
   // canonical order (from categories.json) - a light scanning aid that
   // mirrors the word bank's own sequence rather than an invented taxonomy.
@@ -34964,12 +35017,50 @@ function updateFavicon(dataUrl) {
       row.append(checkbox, name, count, badge);
       item.appendChild(row);
 
-      // Let a teacher pick exactly which words in this category to test -
-      // e.g. "Letters (3x)" repeats every letter 3 times, and only some of
-      // those letters may need testing. Only worth offering when there's
-      // more than one distinct word/letter to choose between.
-      const uniqueWords = [...new Set(cat.words)];
+      // Two optional ways to narrow this category down from its full word
+      // list - only worth offering when there's more than one distinct
+      // word/letter, otherwise there's nothing to narrow.
+      const uniqueWords = [...new Set(cat.words)].sort(compareHebrew);
       if (uniqueWords.length > 1) {
+        // The original approach: just cap how many words to use (the
+        // first N in spreadsheet order), without caring which specific
+        // ones. Left blank, the category behaves exactly as it always
+        // has - every word included.
+        const limitRow = document.createElement("div");
+        limitRow.className = "cat-limit-row";
+        limitRow.hidden = true;
+
+        const limitLabel = document.createElement("span");
+        limitLabel.textContent = "Or just use the first";
+
+        const limitInput = document.createElement("input");
+        limitInput.type = "number";
+        limitInput.className = "cat-limit";
+        limitInput.min = "1";
+        limitInput.max = String(cat.count);
+        limitInput.placeholder = "all";
+        limitInput.addEventListener("change", () => {
+          if (limitInput.value === "") { updatePreview(); return; }
+          let n = Math.round(Number(limitInput.value));
+          if (!Number.isFinite(n) || n < 1) n = 1;
+          if (n > cat.count) n = cat.count;
+          limitInput.value = String(n);
+          updatePreview();
+        });
+
+        const limitSuffix = document.createElement("span");
+        limitSuffix.textContent = `of ${cat.count} words`;
+
+        limitRow.append(limitLabel, limitInput, limitSuffix);
+        item.appendChild(limitRow);
+
+        // The newer approach: pick exactly which words/letters to
+        // include - e.g. "Letters (3x)" repeats every letter 3 times,
+        // and only some of those letters may need testing. Chips start
+        // unselected (the whole category is still used, untouched - see
+        // getCategoryFilters()); clicking a chip *adds* it to the
+        // assessment rather than starting from everything and removing
+        // ones you don't want.
         const pickerRow = document.createElement("div");
         pickerRow.className = "cat-picker-row";
         pickerRow.hidden = true;
@@ -34977,15 +35068,12 @@ function updateFavicon(dataUrl) {
         for (const word of uniqueWords) {
           const chip = document.createElement("button");
           chip.type = "button";
-          chip.className = "word-chip active";
+          chip.className = "word-chip";
           chip.textContent = word;
           chip.dataset.word = word;
-          chip.setAttribute("aria-pressed", "true");
-          chip.title = "Click to exclude from this assessment";
+          chip.setAttribute("aria-pressed", "false");
+          chip.title = "Click to include only this (and other selected) word/letter";
           chip.addEventListener("click", () => {
-            const chips = pickerRow.querySelectorAll(".word-chip");
-            const activeCount = Array.from(chips).filter((c) => c.classList.contains("active")).length;
-            if (chip.classList.contains("active") && activeCount <= 1) return; // keep at least one word active
             const active = chip.classList.toggle("active");
             chip.setAttribute("aria-pressed", String(active));
             updatePreview();
@@ -34995,6 +35083,7 @@ function updateFavicon(dataUrl) {
         item.appendChild(pickerRow);
 
         checkbox.addEventListener("change", () => {
+          limitRow.hidden = !checkbox.checked;
           pickerRow.hidden = !checkbox.checked;
         });
       }
@@ -35003,17 +35092,22 @@ function updateFavicon(dataUrl) {
     }
   }
 
-  /** Reads each checked category's word-picker chips into a
-   * { categoryId: [excludedWord, ...] } map for assemble(). A category
-   * with every chip still active (the default) is omitted, which
-   * assemble() also treats as "use every word" - either way is fine. */
+  /** Reads each checked category's word-picker chips and "use only N"
+   * input into a { categoryId: { include: [...], limit: N } } map for
+   * assemble(). A category left untouched (no chips selected, no limit
+   * set) is omitted, which assemble() also treats as "use every word" -
+   * either way produces identical output. */
   function getCategoryFilters() {
     const filters = {};
     for (const item of el.categoryList.querySelectorAll(".category-item")) {
       const checkbox = item.querySelector("input[type=checkbox]");
       if (!checkbox.checked) continue;
-      const excluded = Array.from(item.querySelectorAll(".word-chip:not(.active)")).map((chip) => chip.dataset.word);
-      if (excluded.length) filters[checkbox.value] = excluded;
+      const include = Array.from(item.querySelectorAll(".word-chip.active")).map((chip) => chip.dataset.word);
+      const limitInput = item.querySelector(".cat-limit");
+      const limit = limitInput && limitInput.value !== "" ? Math.round(Number(limitInput.value)) : undefined;
+      if (include.length || (Number.isInteger(limit) && limit > 0)) {
+        filters[checkbox.value] = { include, limit };
+      }
     }
     return filters;
   }
