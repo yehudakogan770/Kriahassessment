@@ -91,17 +91,70 @@ function updateFavicon(dataUrl) {
 })();
 
 (() => {
-  // Section dividers for the category list, keyed by each category's
-  // canonical order (from categories.json) - a light scanning aid that
-  // mirrors the word bank's own sequence rather than an invented taxonomy.
-  const GROUP_BREAKS = {
-    1: "Letters & Nekudot",
-    4: "Silent Letters",
-    7: "Yud/Vav Endings",
-    8: "Sheva Rules",
-    17: "Shuruk & Dagesh",
-    21: "Shared Dot",
-    22: "Word Endings",
+  // Sorts words/letters into standard Hebrew alphabetical order for the
+  // word-picker chips, rather than the word bank's own (effectively
+  // arbitrary) spreadsheet order. Keyed off each word's first character,
+  // so single letters (the common case - e.g. "Letters (3x)") sort
+  // exactly right, and multi-letter words at least sort by their
+  // opening letter. Final forms (ך ם ן ף ץ) sort right after their
+  // regular counterpart rather than off at the alphabet's end, and a
+  // dagesh/shin-dot/sin-dot combining mark (the 2nd character, when
+  // present) is a secondary key so e.g. כ and כּ sit next to each other.
+  const HEBREW_LETTER_ORDER = "אבגדהוזחטיכלמנסעפצקרשת";
+  const HEBREW_FINAL_TO_REGULAR = { "ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ" };
+  function hebrewWordSortKey(word) {
+    const first = word[0] || "";
+    const base = HEBREW_FINAL_TO_REGULAR[first] || first;
+    const primary = HEBREW_LETTER_ORDER.indexOf(base);
+    const isFinal = HEBREW_FINAL_TO_REGULAR[first] ? 1 : 0;
+    const markCode = word.codePointAt(1) || 0;
+    return [primary === -1 ? 999 : primary, isFinal, markCode];
+  }
+  function compareHebrew(a, b) {
+    const ka = hebrewWordSortKey(a);
+    const kb = hebrewWordSortKey(b);
+    for (let i = 0; i < ka.length; i++) {
+      if (ka[i] !== kb[i]) return ka[i] - kb[i];
+    }
+    return a < b ? -1 : a > b ? 1 : 0;
+  }
+
+  // Groups the category picker into collapsible sections matching the
+  // curriculum's own skill areas, keyed by each category's id - shown only
+  // for the built-in word bank (see usingDefaultData in renderCategoryList),
+  // since an imported spreadsheet's categories won't match this id list.
+  const CATEGORY_GROUP_ORDER = ["Letters", "Vowels", "Vowel - Letter Blend", "Exception Rules", "Sheva Rules"];
+  const CATEGORY_GROUPS = {
+    "c01-letters-3x": "Letters",
+    "c02-nekudot": "Vowels",
+    "c03-basic-dotted-letters": "Vowel - Letter Blend",
+    "c29-nekudot-letter-blend": "Vowel - Letter Blend",
+    "c04-silent-letters-alef": "Exception Rules",
+    "c05-silent-letters-yud": "Exception Rules",
+    "c06-silent-letters-vav": "Exception Rules",
+    "c07-yud-vav-ending": "Exception Rules",
+    "c08-sheva-in-begining": "Sheva Rules",
+    "c09-sheva-in-middle": "Sheva Rules",
+    "c10-g2-sheva-in-middle-under": "Sheva Rules",
+    "c11-shva-in-end": "Sheva Rules",
+    "c12-2-shva-at-the-end": "Sheva Rules",
+    "c13-shva-under-dagesh": "Sheva Rules",
+    "c14-g2-sheva-after-shuruk-in-beg": "Sheva Rules",
+    "c15-g2-sheva-after-sheva": "Sheva Rules",
+    "c16-g2-sheva-under-twin-letters": "Sheva Rules",
+    "c17-shuruk-in-begining": "Sheva Rules",
+    "c18-confusing-dagesh-vav-vs-shuruk": "Exception Rules",
+    "c19-confusing-dagesh-shared-nekudah-dot-shin-sin": "Exception Rules",
+    "c20-confusing-dagesh-vav-vs-cholam-g2": "Exception Rules",
+    "c21-shared-dot": "Exception Rules",
+    "c22-kamatz-yud-ending": "Exception Rules",
+    "c23-patach-yud-ending": "Exception Rules",
+    "c24-silent-letter-and-yud-endings-g2": "Exception Rules",
+    "c25-shuruk-yud-ending-g2": "Exception Rules",
+    "c26-patach-genuvah-chet-g2": "Exception Rules",
+    "c27-patach-genuvah-hey-g2": "Exception Rules",
+    "c28-mapik-hey-hey-endings-g2": "Exception Rules",
+    "c30-cholam-yud-ending-g2": "Exception Rules",
   };
 
   const el = {
@@ -109,6 +162,7 @@ function updateFavicon(dataUrl) {
     studentName: document.getElementById("student-name"),
     grade: document.getElementById("student-grade"),
     date: document.getElementById("doc-date"),
+    showDate: document.getElementById("show-date"),
     columns: document.getElementById("columns"),
     orientation: document.getElementById("orientation"),
     categoryList: document.getElementById("category-list"),
@@ -208,95 +262,173 @@ function updateFavicon(dataUrl) {
   }
   updateHeaderMeta();
 
+  function buildCategoryItem(cat) {
+    const item = document.createElement("div");
+    item.className = "category-item";
+
+    const row = document.createElement("label");
+    row.className = "category-row";
+    row.dataset.id = cat.id;
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = cat.id;
+
+    const name = document.createElement("span");
+    name.className = "cat-name";
+    name.textContent = cat.name;
+
+    const count = document.createElement("span");
+    count.className = "cat-count";
+    count.textContent = `${cat.count} word${cat.count === 1 ? "" : "s"}`;
+
+    const badge = document.createElement("span");
+    badge.className = "cat-badge";
+    badge.hidden = true;
+
+    row.append(checkbox, name, count, badge);
+    item.appendChild(row);
+
+    // Two optional ways to narrow this category down from its full word
+    // list - only worth offering when there's more than one distinct
+    // word/letter, otherwise there's nothing to narrow.
+    const uniqueWords = [...new Set(cat.words)].sort(compareHebrew);
+    if (uniqueWords.length > 1) {
+      // The original approach: just cap how many words to use (the
+      // first N in spreadsheet order), without caring which specific
+      // ones. Left blank, the category behaves exactly as it always
+      // has - every word included.
+      const limitRow = document.createElement("div");
+      limitRow.className = "cat-limit-row";
+      limitRow.hidden = true;
+
+      const limitLabel = document.createElement("span");
+      limitLabel.textContent = "Or just use the first";
+
+      const limitInput = document.createElement("input");
+      limitInput.type = "number";
+      limitInput.className = "cat-limit";
+      limitInput.min = "1";
+      limitInput.max = String(cat.count);
+      limitInput.placeholder = "all";
+      limitInput.addEventListener("change", () => {
+        if (limitInput.value === "") { updatePreview(); return; }
+        let n = Math.round(Number(limitInput.value));
+        if (!Number.isFinite(n) || n < 1) n = 1;
+        if (n > cat.count) n = cat.count;
+        limitInput.value = String(n);
+        updatePreview();
+      });
+
+      const limitSuffix = document.createElement("span");
+      limitSuffix.textContent = `of ${cat.count} words`;
+
+      limitRow.append(limitLabel, limitInput, limitSuffix);
+      item.appendChild(limitRow);
+
+      // The newer approach: pick exactly which words/letters to
+      // include - e.g. "Letters (3x)" repeats every letter 3 times,
+      // and only some of those letters may need testing. Chips start
+      // unselected (the whole category is still used, untouched - see
+      // getCategoryFilters()); clicking a chip *adds* it to the
+      // assessment rather than starting from everything and removing
+      // ones you don't want.
+      const pickerRow = document.createElement("div");
+      pickerRow.className = "cat-picker-row";
+      pickerRow.hidden = true;
+
+      for (const word of uniqueWords) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "word-chip";
+        chip.textContent = word;
+        chip.dataset.word = word;
+        chip.setAttribute("aria-pressed", "false");
+        chip.title = "Click to include only this (and other selected) word/letter";
+        chip.addEventListener("click", () => {
+          const active = chip.classList.toggle("active");
+          chip.setAttribute("aria-pressed", String(active));
+          updatePreview();
+        });
+        pickerRow.appendChild(chip);
+      }
+      item.appendChild(pickerRow);
+
+      checkbox.addEventListener("change", () => {
+        limitRow.hidden = !checkbox.checked;
+        pickerRow.hidden = !checkbox.checked;
+      });
+    }
+
+    return item;
+  }
+
   function renderCategoryList() {
     el.categoryList.innerHTML = "";
+
+    // The 5-group taxonomy describes this specific curriculum's known
+    // structure, so only group by it for the built-in word bank - an
+    // imported spreadsheet's categories won't match this id list, and
+    // fall back to one flat list for those instead.
+    if (!state.usingDefaultData) {
+      for (const cat of CATEGORIES_DATA.categories) {
+        el.categoryList.appendChild(buildCategoryItem(cat));
+      }
+      return;
+    }
+
+    const byGroup = new Map(CATEGORY_GROUP_ORDER.map((name) => [name, []]));
     for (const cat of CATEGORIES_DATA.categories) {
-      // The section dividers describe this specific curriculum's known
-      // structure, so only show them for the built-in word bank - an
-      // imported spreadsheet's categories won't match that structure.
-      if (state.usingDefaultData && GROUP_BREAKS[cat.order]) {
-        const label = document.createElement("div");
-        label.className = "group-label";
-        label.textContent = GROUP_BREAKS[cat.order];
-        el.categoryList.appendChild(label);
-      }
+      const groupName = CATEGORY_GROUPS[cat.id];
+      if (byGroup.has(groupName)) byGroup.get(groupName).push(cat);
+      else byGroup.set(groupName || "Other", [...(byGroup.get(groupName || "Other") || []), cat]);
+    }
 
-      const item = document.createElement("div");
-      item.className = "category-item";
+    for (const [groupName, cats] of byGroup) {
+      if (cats.length === 0) continue;
 
-      const row = document.createElement("label");
-      row.className = "category-row";
-      row.dataset.id = cat.id;
+      const details = document.createElement("details");
+      details.className = "cat-group";
 
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.value = cat.id;
+      const summary = document.createElement("summary");
+      summary.className = "cat-group-summary";
 
-      const name = document.createElement("span");
-      name.className = "cat-name";
-      name.textContent = cat.name;
+      const summaryName = document.createElement("span");
+      summaryName.className = "cat-group-name";
+      summaryName.textContent = groupName;
 
-      const count = document.createElement("span");
-      count.className = "cat-count";
-      count.textContent = `${cat.count} word${cat.count === 1 ? "" : "s"}`;
+      const summaryCount = document.createElement("span");
+      summaryCount.className = "cat-group-count";
+      summaryCount.textContent = `${cats.length} categor${cats.length === 1 ? "y" : "ies"}`;
 
-      const badge = document.createElement("span");
-      badge.className = "cat-badge";
-      badge.hidden = true;
+      summary.append(summaryName, summaryCount);
+      details.appendChild(summary);
 
-      row.append(checkbox, name, count, badge);
-      item.appendChild(row);
+      const body = document.createElement("div");
+      body.className = "cat-group-body";
+      for (const cat of cats) body.appendChild(buildCategoryItem(cat));
+      details.appendChild(body);
 
-      // Let a teacher pick exactly which words in this category to test -
-      // e.g. "Letters (3x)" repeats every letter 3 times, and only some of
-      // those letters may need testing. Only worth offering when there's
-      // more than one distinct word/letter to choose between.
-      const uniqueWords = [...new Set(cat.words)];
-      if (uniqueWords.length > 1) {
-        const pickerRow = document.createElement("div");
-        pickerRow.className = "cat-picker-row";
-        pickerRow.hidden = true;
-
-        for (const word of uniqueWords) {
-          const chip = document.createElement("button");
-          chip.type = "button";
-          chip.className = "word-chip active";
-          chip.textContent = word;
-          chip.dataset.word = word;
-          chip.setAttribute("aria-pressed", "true");
-          chip.title = "Click to exclude from this assessment";
-          chip.addEventListener("click", () => {
-            const chips = pickerRow.querySelectorAll(".word-chip");
-            const activeCount = Array.from(chips).filter((c) => c.classList.contains("active")).length;
-            if (chip.classList.contains("active") && activeCount <= 1) return; // keep at least one word active
-            const active = chip.classList.toggle("active");
-            chip.setAttribute("aria-pressed", String(active));
-            updatePreview();
-          });
-          pickerRow.appendChild(chip);
-        }
-        item.appendChild(pickerRow);
-
-        checkbox.addEventListener("change", () => {
-          pickerRow.hidden = !checkbox.checked;
-        });
-      }
-
-      el.categoryList.appendChild(item);
+      el.categoryList.appendChild(details);
     }
   }
 
-  /** Reads each checked category's word-picker chips into a
-   * { categoryId: [excludedWord, ...] } map for assemble(). A category
-   * with every chip still active (the default) is omitted, which
-   * assemble() also treats as "use every word" - either way is fine. */
+  /** Reads each checked category's word-picker chips and "use only N"
+   * input into a { categoryId: { include: [...], limit: N } } map for
+   * assemble(). A category left untouched (no chips selected, no limit
+   * set) is omitted, which assemble() also treats as "use every word" -
+   * either way produces identical output. */
   function getCategoryFilters() {
     const filters = {};
     for (const item of el.categoryList.querySelectorAll(".category-item")) {
       const checkbox = item.querySelector("input[type=checkbox]");
       if (!checkbox.checked) continue;
-      const excluded = Array.from(item.querySelectorAll(".word-chip:not(.active)")).map((chip) => chip.dataset.word);
-      if (excluded.length) filters[checkbox.value] = excluded;
+      const include = Array.from(item.querySelectorAll(".word-chip.active")).map((chip) => chip.dataset.word);
+      const limitInput = item.querySelector(".cat-limit");
+      const limit = limitInput && limitInput.value !== "" ? Math.round(Number(limitInput.value)) : undefined;
+      if (include.length || (Number.isInteger(limit) && limit > 0)) {
+        filters[checkbox.value] = { include, limit };
+      }
     }
     return filters;
   }
@@ -405,9 +537,25 @@ function updateFavicon(dataUrl) {
       studentName: el.studentName.value.trim(),
       grade: el.grade.value.trim(),
       date: el.date.value.trim(),
+      hideDate: !el.showDate.checked,
       columns: Number(el.columns.value) || 4,
       orientation: el.orientation.value === "landscape" ? "landscape" : "portrait",
     };
+  }
+
+  // A short code shown on both the Teacher and Student copy so they can be
+  // paired back up, and reused as the word-shuffle seed so switching
+  // preview tabs, printing, or downloading Teacher then Student for the
+  // *same* selection always shows the same word order (see assemble()'s
+  // matchCode param). Only regenerated when the selection/filters actually
+  // change - a fresh assessment gets a fresh code and shuffle.
+  let matchCodeCache = null; // { signature, code }
+  function getMatchCode(categoryIds, filters) {
+    const signature = JSON.stringify({ categoryIds, filters });
+    if (!matchCodeCache || matchCodeCache.signature !== signature) {
+      matchCodeCache = { signature, code: generateMatchCode() };
+    }
+    return matchCodeCache.code;
   }
 
   function setStatus(message, kind) {
@@ -436,7 +584,8 @@ function updateFavicon(dataUrl) {
     }
 
     try {
-      const assembled = assemble(categoryIds, getCategoryFilters());
+      const filters = getCategoryFilters();
+      const assembled = assemble(categoryIds, filters, getMatchCode(categoryIds, filters));
       const html = buildHtml({ role: state.previewRole, assembled, meta: buildMeta() });
       el.previewFrame.srcdoc = html;
       el.previewFrame.hidden = false;
@@ -466,7 +615,8 @@ function updateFavicon(dataUrl) {
 
   function printDocument(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds, getCategoryFilters());
+    const filters = getCategoryFilters();
+    const assembled = assemble(categoryIds, filters, getMatchCode(categoryIds, filters));
     const meta = buildMeta();
     const html = buildHtml({ role, assembled, meta });
 
@@ -481,7 +631,8 @@ function updateFavicon(dataUrl) {
 
   async function downloadWord(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds, getCategoryFilters());
+    const filters = getCategoryFilters();
+    const assembled = assemble(categoryIds, filters, getMatchCode(categoryIds, filters));
     const meta = buildMeta();
     const blob = await renderDocx({ role, assembled, meta });
     const filename = filenameFor({ title: meta.title, role, format: "docx", date: meta.date });
@@ -562,6 +713,7 @@ function updateFavicon(dataUrl) {
   });
   [el.title, el.studentName, el.grade, el.date, el.columns].forEach((input) => input.addEventListener("input", updatePreview));
   el.orientation.addEventListener("change", updatePreview);
+  el.showDate.addEventListener("change", updatePreview);
   document.querySelectorAll('input[name="format"]').forEach((r) =>
     r.addEventListener("change", () => {
       setStatus("");

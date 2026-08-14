@@ -1,8 +1,8 @@
 {
   "title": "Ganeinu Academy - Kriah Reading Assessment",
   "sourceSheet": "Copy of Kriah Assessment",
-  "generatedAt": "2026-08-13T02:52:30.604Z",
-  "categoryCount": 28,
+  "generatedAt": "2026-08-13T20:39:04.067Z",
+  "categoryCount": 30,
   "categories": [
     {
       "id": "c01-letters-3x",
@@ -440,6 +440,60 @@
         "בֵּיתָהּ",
         "בַּעֲבוּרָהּ",
         "אִישָׁהּ"
+      ]
+    },
+    {
+      "id": "c29-nekudot-letter-blend",
+      "order": 29,
+      "name": "Nekudot Letter Blend",
+      "count": 35,
+      "words": [
+        "גְ",
+        "תִּ",
+        "כֵ",
+        "פַּ",
+        "כַּ",
+        "ווּ",
+        "מֶ",
+        "זֶ",
+        "בַ",
+        "שָׁ",
+        "אֲ",
+        "שְׁ",
+        "נוֹ",
+        "שֵׂ",
+        "חֱ",
+        "סֳ",
+        "רִ",
+        "הֱ",
+        "ךָ",
+        "כֻּ",
+        "צָ",
+        "צֳ",
+        "תְ",
+        "חֻ",
+        "מֳ",
+        "לֵ",
+        "דָ",
+        "לִ",
+        "זְ",
+        "יוֹ",
+        "עֲ",
+        "פוֹ",
+        "טוּ",
+        "קֻ",
+        "בּוּ"
+      ]
+    },
+    {
+      "id": "c30-cholam-yud-ending-g2",
+      "order": 30,
+      "name": "Cholam Yud Ending G2",
+      "count": 3,
+      "words": [
+        "אוֹי",
+        "גוֹי",
+        "הוֹי"
       ]
     }
   ]
