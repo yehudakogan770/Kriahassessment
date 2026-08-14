@@ -119,17 +119,42 @@ function updateFavicon(dataUrl) {
     return a < b ? -1 : a > b ? 1 : 0;
   }
 
-  // Section dividers for the category list, keyed by each category's
-  // canonical order (from categories.json) - a light scanning aid that
-  // mirrors the word bank's own sequence rather than an invented taxonomy.
-  const GROUP_BREAKS = {
-    1: "Letters & Nekudot",
-    4: "Silent Letters",
-    7: "Yud/Vav Endings",
-    8: "Sheva Rules",
-    17: "Shuruk & Dagesh",
-    21: "Shared Dot",
-    22: "Word Endings",
+  // Groups the category picker into collapsible sections matching the
+  // curriculum's own skill areas, keyed by each category's id - shown only
+  // for the built-in word bank (see usingDefaultData in renderCategoryList),
+  // since an imported spreadsheet's categories won't match this id list.
+  const CATEGORY_GROUP_ORDER = ["Letters", "Vowels", "Vowel - Letter Blend", "Exception Rules", "Sheva Rules"];
+  const CATEGORY_GROUPS = {
+    "c01-letters-3x": "Letters",
+    "c02-nekudot": "Vowels",
+    "c03-basic-dotted-letters": "Vowel - Letter Blend",
+    "c29-nekudot-letter-blend": "Vowel - Letter Blend",
+    "c04-silent-letters-alef": "Exception Rules",
+    "c05-silent-letters-yud": "Exception Rules",
+    "c06-silent-letters-vav": "Exception Rules",
+    "c07-yud-vav-ending": "Exception Rules",
+    "c08-sheva-in-begining": "Sheva Rules",
+    "c09-sheva-in-middle": "Sheva Rules",
+    "c10-g2-sheva-in-middle-under": "Sheva Rules",
+    "c11-shva-in-end": "Sheva Rules",
+    "c12-2-shva-at-the-end": "Sheva Rules",
+    "c13-shva-under-dagesh": "Sheva Rules",
+    "c14-g2-sheva-after-shuruk-in-beg": "Sheva Rules",
+    "c15-g2-sheva-after-sheva": "Sheva Rules",
+    "c16-g2-sheva-under-twin-letters": "Sheva Rules",
+    "c17-shuruk-in-begining": "Sheva Rules",
+    "c18-confusing-dagesh-vav-vs-shuruk": "Exception Rules",
+    "c19-confusing-dagesh-shared-nekudah-dot-shin-sin": "Exception Rules",
+    "c20-confusing-dagesh-vav-vs-cholam-g2": "Exception Rules",
+    "c21-shared-dot": "Exception Rules",
+    "c22-kamatz-yud-ending": "Exception Rules",
+    "c23-patach-yud-ending": "Exception Rules",
+    "c24-silent-letter-and-yud-endings-g2": "Exception Rules",
+    "c25-shuruk-yud-ending-g2": "Exception Rules",
+    "c26-patach-genuvah-chet-g2": "Exception Rules",
+    "c27-patach-genuvah-hey-g2": "Exception Rules",
+    "c28-mapik-hey-hey-endings-g2": "Exception Rules",
+    "c30-cholam-yud-ending-g2": "Exception Rules",
   };
 
   const el = {
@@ -137,6 +162,7 @@ function updateFavicon(dataUrl) {
     studentName: document.getElementById("student-name"),
     grade: document.getElementById("student-grade"),
     date: document.getElementById("doc-date"),
+    showDate: document.getElementById("show-date"),
     columns: document.getElementById("columns"),
     orientation: document.getElementById("orientation"),
     categoryList: document.getElementById("category-list"),
@@ -236,117 +262,154 @@ function updateFavicon(dataUrl) {
   }
   updateHeaderMeta();
 
-  function renderCategoryList() {
-    el.categoryList.innerHTML = "";
-    for (const cat of CATEGORIES_DATA.categories) {
-      // The section dividers describe this specific curriculum's known
-      // structure, so only show them for the built-in word bank - an
-      // imported spreadsheet's categories won't match that structure.
-      if (state.usingDefaultData && GROUP_BREAKS[cat.order]) {
-        const label = document.createElement("div");
-        label.className = "group-label";
-        label.textContent = GROUP_BREAKS[cat.order];
-        el.categoryList.appendChild(label);
-      }
+  function buildCategoryItem(cat) {
+    const item = document.createElement("div");
+    item.className = "category-item";
 
-      const item = document.createElement("div");
-      item.className = "category-item";
+    const row = document.createElement("label");
+    row.className = "category-row";
+    row.dataset.id = cat.id;
 
-      const row = document.createElement("label");
-      row.className = "category-row";
-      row.dataset.id = cat.id;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = cat.id;
 
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.value = cat.id;
+    const name = document.createElement("span");
+    name.className = "cat-name";
+    name.textContent = cat.name;
 
-      const name = document.createElement("span");
-      name.className = "cat-name";
-      name.textContent = cat.name;
+    const count = document.createElement("span");
+    count.className = "cat-count";
+    count.textContent = `${cat.count} word${cat.count === 1 ? "" : "s"}`;
 
-      const count = document.createElement("span");
-      count.className = "cat-count";
-      count.textContent = `${cat.count} word${cat.count === 1 ? "" : "s"}`;
+    const badge = document.createElement("span");
+    badge.className = "cat-badge";
+    badge.hidden = true;
 
-      const badge = document.createElement("span");
-      badge.className = "cat-badge";
-      badge.hidden = true;
+    row.append(checkbox, name, count, badge);
+    item.appendChild(row);
 
-      row.append(checkbox, name, count, badge);
-      item.appendChild(row);
+    // Two optional ways to narrow this category down from its full word
+    // list - only worth offering when there's more than one distinct
+    // word/letter, otherwise there's nothing to narrow.
+    const uniqueWords = [...new Set(cat.words)].sort(compareHebrew);
+    if (uniqueWords.length > 1) {
+      // The original approach: just cap how many words to use (the
+      // first N in spreadsheet order), without caring which specific
+      // ones. Left blank, the category behaves exactly as it always
+      // has - every word included.
+      const limitRow = document.createElement("div");
+      limitRow.className = "cat-limit-row";
+      limitRow.hidden = true;
 
-      // Two optional ways to narrow this category down from its full word
-      // list - only worth offering when there's more than one distinct
-      // word/letter, otherwise there's nothing to narrow.
-      const uniqueWords = [...new Set(cat.words)].sort(compareHebrew);
-      if (uniqueWords.length > 1) {
-        // The original approach: just cap how many words to use (the
-        // first N in spreadsheet order), without caring which specific
-        // ones. Left blank, the category behaves exactly as it always
-        // has - every word included.
-        const limitRow = document.createElement("div");
-        limitRow.className = "cat-limit-row";
-        limitRow.hidden = true;
+      const limitLabel = document.createElement("span");
+      limitLabel.textContent = "Or just use the first";
 
-        const limitLabel = document.createElement("span");
-        limitLabel.textContent = "Or just use the first";
+      const limitInput = document.createElement("input");
+      limitInput.type = "number";
+      limitInput.className = "cat-limit";
+      limitInput.min = "1";
+      limitInput.max = String(cat.count);
+      limitInput.placeholder = "all";
+      limitInput.addEventListener("change", () => {
+        if (limitInput.value === "") { updatePreview(); return; }
+        let n = Math.round(Number(limitInput.value));
+        if (!Number.isFinite(n) || n < 1) n = 1;
+        if (n > cat.count) n = cat.count;
+        limitInput.value = String(n);
+        updatePreview();
+      });
 
-        const limitInput = document.createElement("input");
-        limitInput.type = "number";
-        limitInput.className = "cat-limit";
-        limitInput.min = "1";
-        limitInput.max = String(cat.count);
-        limitInput.placeholder = "all";
-        limitInput.addEventListener("change", () => {
-          if (limitInput.value === "") { updatePreview(); return; }
-          let n = Math.round(Number(limitInput.value));
-          if (!Number.isFinite(n) || n < 1) n = 1;
-          if (n > cat.count) n = cat.count;
-          limitInput.value = String(n);
+      const limitSuffix = document.createElement("span");
+      limitSuffix.textContent = `of ${cat.count} words`;
+
+      limitRow.append(limitLabel, limitInput, limitSuffix);
+      item.appendChild(limitRow);
+
+      // The newer approach: pick exactly which words/letters to
+      // include - e.g. "Letters (3x)" repeats every letter 3 times,
+      // and only some of those letters may need testing. Chips start
+      // unselected (the whole category is still used, untouched - see
+      // getCategoryFilters()); clicking a chip *adds* it to the
+      // assessment rather than starting from everything and removing
+      // ones you don't want.
+      const pickerRow = document.createElement("div");
+      pickerRow.className = "cat-picker-row";
+      pickerRow.hidden = true;
+
+      for (const word of uniqueWords) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "word-chip";
+        chip.textContent = word;
+        chip.dataset.word = word;
+        chip.setAttribute("aria-pressed", "false");
+        chip.title = "Click to include only this (and other selected) word/letter";
+        chip.addEventListener("click", () => {
+          const active = chip.classList.toggle("active");
+          chip.setAttribute("aria-pressed", String(active));
           updatePreview();
         });
-
-        const limitSuffix = document.createElement("span");
-        limitSuffix.textContent = `of ${cat.count} words`;
-
-        limitRow.append(limitLabel, limitInput, limitSuffix);
-        item.appendChild(limitRow);
-
-        // The newer approach: pick exactly which words/letters to
-        // include - e.g. "Letters (3x)" repeats every letter 3 times,
-        // and only some of those letters may need testing. Chips start
-        // unselected (the whole category is still used, untouched - see
-        // getCategoryFilters()); clicking a chip *adds* it to the
-        // assessment rather than starting from everything and removing
-        // ones you don't want.
-        const pickerRow = document.createElement("div");
-        pickerRow.className = "cat-picker-row";
-        pickerRow.hidden = true;
-
-        for (const word of uniqueWords) {
-          const chip = document.createElement("button");
-          chip.type = "button";
-          chip.className = "word-chip";
-          chip.textContent = word;
-          chip.dataset.word = word;
-          chip.setAttribute("aria-pressed", "false");
-          chip.title = "Click to include only this (and other selected) word/letter";
-          chip.addEventListener("click", () => {
-            const active = chip.classList.toggle("active");
-            chip.setAttribute("aria-pressed", String(active));
-            updatePreview();
-          });
-          pickerRow.appendChild(chip);
-        }
-        item.appendChild(pickerRow);
-
-        checkbox.addEventListener("change", () => {
-          limitRow.hidden = !checkbox.checked;
-          pickerRow.hidden = !checkbox.checked;
-        });
+        pickerRow.appendChild(chip);
       }
+      item.appendChild(pickerRow);
 
-      el.categoryList.appendChild(item);
+      checkbox.addEventListener("change", () => {
+        limitRow.hidden = !checkbox.checked;
+        pickerRow.hidden = !checkbox.checked;
+      });
+    }
+
+    return item;
+  }
+
+  function renderCategoryList() {
+    el.categoryList.innerHTML = "";
+
+    // The 5-group taxonomy describes this specific curriculum's known
+    // structure, so only group by it for the built-in word bank - an
+    // imported spreadsheet's categories won't match this id list, and
+    // fall back to one flat list for those instead.
+    if (!state.usingDefaultData) {
+      for (const cat of CATEGORIES_DATA.categories) {
+        el.categoryList.appendChild(buildCategoryItem(cat));
+      }
+      return;
+    }
+
+    const byGroup = new Map(CATEGORY_GROUP_ORDER.map((name) => [name, []]));
+    for (const cat of CATEGORIES_DATA.categories) {
+      const groupName = CATEGORY_GROUPS[cat.id];
+      if (byGroup.has(groupName)) byGroup.get(groupName).push(cat);
+      else byGroup.set(groupName || "Other", [...(byGroup.get(groupName || "Other") || []), cat]);
+    }
+
+    for (const [groupName, cats] of byGroup) {
+      if (cats.length === 0) continue;
+
+      const details = document.createElement("details");
+      details.className = "cat-group";
+
+      const summary = document.createElement("summary");
+      summary.className = "cat-group-summary";
+
+      const summaryName = document.createElement("span");
+      summaryName.className = "cat-group-name";
+      summaryName.textContent = groupName;
+
+      const summaryCount = document.createElement("span");
+      summaryCount.className = "cat-group-count";
+      summaryCount.textContent = `${cats.length} categor${cats.length === 1 ? "y" : "ies"}`;
+
+      summary.append(summaryName, summaryCount);
+      details.appendChild(summary);
+
+      const body = document.createElement("div");
+      body.className = "cat-group-body";
+      for (const cat of cats) body.appendChild(buildCategoryItem(cat));
+      details.appendChild(body);
+
+      el.categoryList.appendChild(details);
     }
   }
 
@@ -474,9 +537,25 @@ function updateFavicon(dataUrl) {
       studentName: el.studentName.value.trim(),
       grade: el.grade.value.trim(),
       date: el.date.value.trim(),
+      hideDate: !el.showDate.checked,
       columns: Number(el.columns.value) || 4,
       orientation: el.orientation.value === "landscape" ? "landscape" : "portrait",
     };
+  }
+
+  // A short code shown on both the Teacher and Student copy so they can be
+  // paired back up, and reused as the word-shuffle seed so switching
+  // preview tabs, printing, or downloading Teacher then Student for the
+  // *same* selection always shows the same word order (see assemble()'s
+  // matchCode param). Only regenerated when the selection/filters actually
+  // change - a fresh assessment gets a fresh code and shuffle.
+  let matchCodeCache = null; // { signature, code }
+  function getMatchCode(categoryIds, filters) {
+    const signature = JSON.stringify({ categoryIds, filters });
+    if (!matchCodeCache || matchCodeCache.signature !== signature) {
+      matchCodeCache = { signature, code: generateMatchCode() };
+    }
+    return matchCodeCache.code;
   }
 
   function setStatus(message, kind) {
@@ -505,7 +584,8 @@ function updateFavicon(dataUrl) {
     }
 
     try {
-      const assembled = assemble(categoryIds, getCategoryFilters());
+      const filters = getCategoryFilters();
+      const assembled = assemble(categoryIds, filters, getMatchCode(categoryIds, filters));
       const html = buildHtml({ role: state.previewRole, assembled, meta: buildMeta() });
       el.previewFrame.srcdoc = html;
       el.previewFrame.hidden = false;
@@ -535,7 +615,8 @@ function updateFavicon(dataUrl) {
 
   function printDocument(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds, getCategoryFilters());
+    const filters = getCategoryFilters();
+    const assembled = assemble(categoryIds, filters, getMatchCode(categoryIds, filters));
     const meta = buildMeta();
     const html = buildHtml({ role, assembled, meta });
 
@@ -550,7 +631,8 @@ function updateFavicon(dataUrl) {
 
   async function downloadWord(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds, getCategoryFilters());
+    const filters = getCategoryFilters();
+    const assembled = assemble(categoryIds, filters, getMatchCode(categoryIds, filters));
     const meta = buildMeta();
     const blob = await renderDocx({ role, assembled, meta });
     const filename = filenameFor({ title: meta.title, role, format: "docx", date: meta.date });
@@ -631,6 +713,7 @@ function updateFavicon(dataUrl) {
   });
   [el.title, el.studentName, el.grade, el.date, el.columns].forEach((input) => input.addEventListener("input", updatePreview));
   el.orientation.addEventListener("change", updatePreview);
+  el.showDate.addEventListener("change", updatePreview);
   document.querySelectorAll('input[name="format"]').forEach((r) =>
     r.addEventListener("change", () => {
       setStatus("");

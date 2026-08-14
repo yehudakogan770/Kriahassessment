@@ -267,6 +267,18 @@ button:focus-visible, .tab:focus-visible, .radio-pill:has(input:focus-visible) {
 .field-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .field-row .field { flex: 1 1 140px; min-width: 0; }
 .field-narrow { max-width: 150px; }
+.field-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+  align-self: flex-end;
+  padding-bottom: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.field-checkbox input { width: auto; margin: 0; }
 .hint { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; line-height: 1.4; }
 
 /* ---------- Category picker ---------- */
@@ -290,18 +302,39 @@ button:focus-visible, .tab:focus-visible, .radio-pill:has(input:focus-visible) {
   border-radius: 8px;
   background: var(--surface-2);
 }
-.group-label {
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  font-weight: 700;
-  color: var(--muted);
+
+.cat-group { border-bottom: 1px solid var(--border-soft); }
+.cat-group:last-child { border-bottom: none; }
+.cat-group-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
   background: var(--surface);
-  padding: 6px 12px;
-  border-bottom: 1px solid var(--border-soft);
-  border-top: 1px solid var(--border-soft);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  list-style: none;
 }
-.group-label:first-child { border-top: none; }
+.cat-group-summary::-webkit-details-marker { display: none; }
+.cat-group-summary::before {
+  content: "\25B8";
+  display: inline-block;
+  margin-inline-end: 7px;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.cat-group[open] > .cat-group-summary::before { transform: rotate(90deg); }
+.cat-group-name { flex: 1; text-transform: uppercase; letter-spacing: 0.06em; }
+.cat-group-count {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.cat-group-body { border-top: 1px solid var(--border-soft); }
 
 .category-row {
   display: flex;
@@ -572,6 +605,10 @@ button:focus-visible, .tab:focus-visible, .radio-pill:has(input:focus-visible) {
           <label class="field">
             <span>Date</span>
             <input id="doc-date" type="date" />
+          </label>
+          <label class="field-checkbox">
+            <input id="show-date" type="checkbox" checked />
+            <span>Show date on document</span>
           </label>
         </div>
         <div class="field-row">
@@ -33873,7 +33910,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 "use strict";
 const AUTH_PASSCODE_HASH = "ac03bd4ce1a82697bc991ae8f0ac71f02436956e8acb11e51f41a3b2cd650cd3";
 const DEFAULT_LOGO_DATA_URL = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBwgHBgkIBwgKCgkLDRYPDQwMDRsUFRAWIB0iIiAdHx8kKDQsJCYxJx8fLT0tMTU3Ojo6Iys/RD84QzQ5OjcBCgoKDQwNGg8PGjclHyU3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3Nzc3N//AABEIAb8BvwMBIgACEQEDEQH/xAAcAAEAAgIDAQAAAAAAAAAAAAAABgcBBQIECAP/xABSEAABAwMBBAQIBwkPBAMBAAABAAIDBAURBgcSITETQVFhFCIycYGRobEVIzZydMHRNUJSVWJzkrLwFhckJTM0U4KDk5SzwtLhJkVU8UNkooT/xAAaAQEAAgMBAAAAAAAAAAAAAAAAAwQBAgUG/8QAMREAAgIBBAEBCAAFBQEAAAAAAAECAxEEEiExQRMFIjIzUWFxkSM0QoGhFBVD4fBS/9oADAMBAAIRAxEAPwC8UREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAEREAREQBERAERYyEBlEyiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiIAiIgCIsE4BKAEgc0yFHtT6robBFuzB0tS7yIGc/OT1BQOfaReXyh0UVNEzPkhmc+kqWuiyaykRysjF4Zbm8FkHKrC3bTp2yfxnQtfF1ugOHD0HgfYpwNR2jwSKr8NjEErt1r+rPf2elJ02Q+JGYzjL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";
-const CATEGORIES_DATA = {"title":"Ganeinu Academy - Kriah Reading Assessment","sourceSheet":"Copy of Kriah Assessment","generatedAt":"2026-08-13T02:52:30.604Z","categoryCount":28,"categories":[{"id":"c01-letters-3x","order":1,"name":"Letters (3x)","count":78,"words":["שׁ","צ","ז","שׂ","ם","ן","צ","ג","א","ו","ט","א","תּ","ץ","ד","ר","כּ","מ","ר","שׂ","ץ","בּ","ס","נ","כ","ק","ן","ב","שׂ","ם","ך","ו","ס","נ","שׁ","ק","ר","כ","צ","פּ","ה","ג","ח","ע","ת","ס","ה","ט","מ","כּ","נ","כ","ף","ע","ךּ","ז","ק","מ","ח","שׂ","בּ","פ","ל","תּ","ד","י","כּ","ע","תּ","ף","ץ","שׁ","פּ","ם","י","פ","ה","ךּ"]},{"id":"c02-nekudot","order":2,"name":"Nekudot","count":36,"words":["אָ","אְ","אֶ","אַ","אִ","אוֹ","אֵ","אֳ‎","אֱ","אֶ","אוּ","אָ","אְ","אֻ","אֲ‎","אוֹ","אֶ","אַ","אִ","אֲ‎","אֳ‎","אֻ","אַ","אֵ","אוּ","אֱ","אְ","אֳ‎","אוֹ","אוּ","אֲ‎","אֵ","אִ","אֱ","אָ","אֻ"]},{"id":"c03-basic-dotted-letters","order":3,"name":"Basic Dotted Letters","count":24,"words":["בָּנוּ","בְּשֵׁם","בְּךָ","אָבֶן","קֹבֵץ","יֶקֶב","כֶּסֶף","כֶּבֶשׂ","כּוֹרֶשׁ","כֵן","כַף","תֹּכֶן","פֶּן","פָּרַץ","פּוֹדֶה","אֹפֶה","סָפוּן","צְפֹן","שָׁכֵן","דֶשֶׁא","מֶשֶׁךְ","חָרֶשׂ","עֹשֶׂךָ","שֶׁעָשׂוּ"]},{"id":"c04-silent-letters-alef","order":4,"name":"Silent Letters Alef","count":3,"words":["תֹאכַל","יֹאשִׁיָּהוּ","רֵאשִׁית"]},{"id":"c05-silent-letters-yud","order":5,"name":"Silent Letters Yud","count":3,"words":["עָלֶיהָ","וִיהוּדָה","שְׁעָרִים"]},{"id":"c06-silent-letters-vav","order":6,"name":"Silent Letters Vav","count":1,"words":["הִוא"]},{"id":"c07-yud-vav-ending","order":7,"name":"Yud Vav Ending","count":3,"words":["שִׁנָּיו","עָלָיו","כַּפָּיו"]},{"id":"c08-sheva-in-begining","order":8,"name":"Sheva in Begining","count":3,"words":["לְעוֹלָם","מְכוֹן","שְׂשׂוֹן"]},{"id":"c09-sheva-in-middle","order":9,"name":"Sheva in middle","count":3,"words":["אֶזְבַּח","יִשְׁכּוֹן","וַתֵּלַדְןָ"]},{"id":"c10-g2-sheva-in-middle-under","order":10,"name":"G2 Sheva in middle under א-ה-ע-י","count":3,"words":["תַּעְלִים","יִהְיֶה","לֶאְסֹר"]},{"id":"c11-shva-in-end","order":11,"name":"Shva in end","count":3,"words":["מֶשֶׁךְ","לָקַחַתְּ","נֶהְפַּךְ"]},{"id":"c12-2-shva-at-the-end","order":12,"name":"2 Shva at the end","count":3,"words":["תֵּשְׁתְּ","וְיֵרְדְּ","וַיֵּבְךְּ"]},{"id":"c13-shva-under-dagesh","order":13,"name":"Shva under Dagesh","count":3,"words":["מִבְּנֵי","סִפְּרוּ","קַיְּמֵנִי"]},{"id":"c14-g2-sheva-after-shuruk-in-beg","order":14,"name":"G2 Sheva after SHURUK in beg.","count":3,"words":["וּרְבוּ","וּרְדוּ","וּבְעוֹף"]},{"id":"c15-g2-sheva-after-sheva","order":15,"name":"G2 Sheva after Sheva","count":3,"words":["תִּרְקְדוּ","תִפְקְדֶנּוּ","תִּשְׁפְּטוּ"]},{"id":"c16-g2-sheva-under-twin-letters","order":16,"name":"G2 Sheva under Twin letters","count":6,"words":["עוֹרְרָה","מְרוֹמְמִי","לְחֶנְנָהּ","הִלַּלְנוּ","אֲרוֹמִמְךָ","לִלְמֹד"]},{"id":"c17-shuruk-in-begining","order":17,"name":"Shuruk in begining","count":3,"words":["וּמָנוֹס","וּמֵרִים","וּמֹרֶה"]},{"id":"c18-confusing-dagesh-vav-vs-shuruk","order":18,"name":"Confusing Dagesh Vav vs Shuruk","count":3,"words":["צִוִּיתִיךָ","חַוָּה","קַוֵּה"]},{"id":"c19-confusing-dagesh-shared-nekudah-dot-shin-sin","order":19,"name":"Confusing Dagesh Shared Nekudah dot. Shin /Sin","count":3,"words":["נְפָשֹׁת","שֹׁפֵט","הַלָּשֹׁן"]},{"id":"c20-confusing-dagesh-vav-vs-cholam-g2","order":20,"name":"Confusing Dagesh Vav vs Cholam G2","count":3,"words":["עֲוֺן","קְּצָוֺת","בְּהַעֲוֺתוֹ"]},{"id":"c21-shared-dot","order":21,"name":"Shared Dot","count":3,"words":["יַעְשׂר","שׂבַע","יֵבשׁוּ"]},{"id":"c22-kamatz-yud-ending","order":22,"name":"Kamatz Yud Ending","count":3,"words":["מָתָי","יִשָׁי","אַבוֹתָי"]},{"id":"c23-patach-yud-ending","order":23,"name":"Patach Yud Ending","count":3,"words":["שָׂדַי","עָלַי","שְֹפָתַי"]},{"id":"c24-silent-letter-and-yud-endings-g2","order":24,"name":"Silent Letter and Yud Endings G2","count":3,"words":["שַׁמַאי","כְּדַאי","זַכַּאי"]},{"id":"c25-shuruk-yud-ending-g2","order":25,"name":"Shuruk Yud Ending G2","count":3,"words":["וִידוּי","כְּסוּי","גָלוּי"]},{"id":"c26-patach-genuvah-chet-g2","order":26,"name":"Patach Genuvah Chet G2","count":3,"words":["פּוֺקֵחַ","שָׂמֵחַ","מַצְמִיחַ"]},{"id":"c27-patach-genuvah-hey-g2","order":27,"name":"Patach Genuvah Hey G2","count":3,"words":["הַגְבֵּהַּ","לְהִתְמַהְמֵהַּ","נֹהַּ"]},{"id":"c28-mapik-hey-hey-endings-g2","order":28,"name":"Mapik Hey Hey Endings G2","count":3,"words":["בֵּיתָהּ","בַּעֲבוּרָהּ","אִישָׁהּ"]}]};
+const CATEGORIES_DATA = {"title":"Ganeinu Academy - Kriah Reading Assessment","sourceSheet":"Copy of Kriah Assessment","generatedAt":"2026-08-13T20:39:04.067Z","categoryCount":30,"categories":[{"id":"c01-letters-3x","order":1,"name":"Letters (3x)","count":78,"words":["שׁ","צ","ז","שׂ","ם","ן","צ","ג","א","ו","ט","א","תּ","ץ","ד","ר","כּ","מ","ר","שׂ","ץ","בּ","ס","נ","כ","ק","ן","ב","שׂ","ם","ך","ו","ס","נ","שׁ","ק","ר","כ","צ","פּ","ה","ג","ח","ע","ת","ס","ה","ט","מ","כּ","נ","כ","ף","ע","ךּ","ז","ק","מ","ח","שׂ","בּ","פ","ל","תּ","ד","י","כּ","ע","תּ","ף","ץ","שׁ","פּ","ם","י","פ","ה","ךּ"]},{"id":"c02-nekudot","order":2,"name":"Nekudot","count":36,"words":["אָ","אְ","אֶ","אַ","אִ","אוֹ","אֵ","אֳ‎","אֱ","אֶ","אוּ","אָ","אְ","אֻ","אֲ‎","אוֹ","אֶ","אַ","אִ","אֲ‎","אֳ‎","אֻ","אַ","אֵ","אוּ","אֱ","אְ","אֳ‎","אוֹ","אוּ","אֲ‎","אֵ","אִ","אֱ","אָ","אֻ"]},{"id":"c03-basic-dotted-letters","order":3,"name":"Basic Dotted Letters","count":24,"words":["בָּנוּ","בְּשֵׁם","בְּךָ","אָבֶן","קֹבֵץ","יֶקֶב","כֶּסֶף","כֶּבֶשׂ","כּוֹרֶשׁ","כֵן","כַף","תֹּכֶן","פֶּן","פָּרַץ","פּוֹדֶה","אֹפֶה","סָפוּן","צְפֹן","שָׁכֵן","דֶשֶׁא","מֶשֶׁךְ","חָרֶשׂ","עֹשֶׂךָ","שֶׁעָשׂוּ"]},{"id":"c04-silent-letters-alef","order":4,"name":"Silent Letters Alef","count":3,"words":["תֹאכַל","יֹאשִׁיָּהוּ","רֵאשִׁית"]},{"id":"c05-silent-letters-yud","order":5,"name":"Silent Letters Yud","count":3,"words":["עָלֶיהָ","וִיהוּדָה","שְׁעָרִים"]},{"id":"c06-silent-letters-vav","order":6,"name":"Silent Letters Vav","count":1,"words":["הִוא"]},{"id":"c07-yud-vav-ending","order":7,"name":"Yud Vav Ending","count":3,"words":["שִׁנָּיו","עָלָיו","כַּפָּיו"]},{"id":"c08-sheva-in-begining","order":8,"name":"Sheva in Begining","count":3,"words":["לְעוֹלָם","מְכוֹן","שְׂשׂוֹן"]},{"id":"c09-sheva-in-middle","order":9,"name":"Sheva in middle","count":3,"words":["אֶזְבַּח","יִשְׁכּוֹן","וַתֵּלַדְןָ"]},{"id":"c10-g2-sheva-in-middle-under","order":10,"name":"G2 Sheva in middle under א-ה-ע-י","count":3,"words":["תַּעְלִים","יִהְיֶה","לֶאְסֹר"]},{"id":"c11-shva-in-end","order":11,"name":"Shva in end","count":3,"words":["מֶשֶׁךְ","לָקַחַתְּ","נֶהְפַּךְ"]},{"id":"c12-2-shva-at-the-end","order":12,"name":"2 Shva at the end","count":3,"words":["תֵּשְׁתְּ","וְיֵרְדְּ","וַיֵּבְךְּ"]},{"id":"c13-shva-under-dagesh","order":13,"name":"Shva under Dagesh","count":3,"words":["מִבְּנֵי","סִפְּרוּ","קַיְּמֵנִי"]},{"id":"c14-g2-sheva-after-shuruk-in-beg","order":14,"name":"G2 Sheva after SHURUK in beg.","count":3,"words":["וּרְבוּ","וּרְדוּ","וּבְעוֹף"]},{"id":"c15-g2-sheva-after-sheva","order":15,"name":"G2 Sheva after Sheva","count":3,"words":["תִּרְקְדוּ","תִפְקְדֶנּוּ","תִּשְׁפְּטוּ"]},{"id":"c16-g2-sheva-under-twin-letters","order":16,"name":"G2 Sheva under Twin letters","count":6,"words":["עוֹרְרָה","מְרוֹמְמִי","לְחֶנְנָהּ","הִלַּלְנוּ","אֲרוֹמִמְךָ","לִלְמֹד"]},{"id":"c17-shuruk-in-begining","order":17,"name":"Shuruk in begining","count":3,"words":["וּמָנוֹס","וּמֵרִים","וּמֹרֶה"]},{"id":"c18-confusing-dagesh-vav-vs-shuruk","order":18,"name":"Confusing Dagesh Vav vs Shuruk","count":3,"words":["צִוִּיתִיךָ","חַוָּה","קַוֵּה"]},{"id":"c19-confusing-dagesh-shared-nekudah-dot-shin-sin","order":19,"name":"Confusing Dagesh Shared Nekudah dot. Shin /Sin","count":3,"words":["נְפָשֹׁת","שֹׁפֵט","הַלָּשֹׁן"]},{"id":"c20-confusing-dagesh-vav-vs-cholam-g2","order":20,"name":"Confusing Dagesh Vav vs Cholam G2","count":3,"words":["עֲוֺן","קְּצָוֺת","בְּהַעֲוֺתוֹ"]},{"id":"c21-shared-dot","order":21,"name":"Shared Dot","count":3,"words":["יַעְשׂר","שׂבַע","יֵבשׁוּ"]},{"id":"c22-kamatz-yud-ending","order":22,"name":"Kamatz Yud Ending","count":3,"words":["מָתָי","יִשָׁי","אַבוֹתָי"]},{"id":"c23-patach-yud-ending","order":23,"name":"Patach Yud Ending","count":3,"words":["שָׂדַי","עָלַי","שְֹפָתַי"]},{"id":"c24-silent-letter-and-yud-endings-g2","order":24,"name":"Silent Letter and Yud Endings G2","count":3,"words":["שַׁמַאי","כְּדַאי","זַכַּאי"]},{"id":"c25-shuruk-yud-ending-g2","order":25,"name":"Shuruk Yud Ending G2","count":3,"words":["וִידוּי","כְּסוּי","גָלוּי"]},{"id":"c26-patach-genuvah-chet-g2","order":26,"name":"Patach Genuvah Chet G2","count":3,"words":["פּוֺקֵחַ","שָׂמֵחַ","מַצְמִיחַ"]},{"id":"c27-patach-genuvah-hey-g2","order":27,"name":"Patach Genuvah Hey G2","count":3,"words":["הַגְבֵּהַּ","לְהִתְמַהְמֵהַּ","נֹהַּ"]},{"id":"c28-mapik-hey-hey-endings-g2","order":28,"name":"Mapik Hey Hey Endings G2","count":3,"words":["בֵּיתָהּ","בַּעֲבוּרָהּ","אִישָׁהּ"]},{"id":"c29-nekudot-letter-blend","order":29,"name":"Nekudot Letter Blend","count":35,"words":["גְ","תִּ","כֵ","פַּ","כַּ","ווּ","מֶ","זֶ","בַ","שָׁ","אֲ","שְׁ","נוֹ","שֵׂ","חֱ","סֳ","רִ","הֱ","ךָ","כֻּ","צָ","צֳ","תְ","חֻ","מֳ","לֵ","דָ","לִ","זְ","יוֹ","עֲ","פוֹ","טוּ","קֻ","בּוּ"]},{"id":"c30-cholam-yud-ending-g2","order":30,"name":"Cholam Yud Ending G2","count":3,"words":["אוֹי","גוֹי","הוֹי"]}]};
 function getCategories() { return CATEGORIES_DATA.categories; }
 
 // Verbatim teacher testing procedure - shared by the PDF/HTML and Word builders
@@ -33970,10 +34007,51 @@ function getFontFaceCss() { return FONT_FACE_CSS; }
 
 class InvalidSelectionError extends Error {}
 
-/** Fisher-Yates - uniform random shuffle, in place. */
-function shuffle(arr) {
+// A short, print-friendly code (avoids 0/O/1/I/L, which are easy to
+// misread on a printed page) shown on both the Teacher and Student copy so
+// they can be paired back up - e.g. after handing them out and collecting
+// them separately. It doubles as the word-shuffle seed (see mulberry32
+// below), which is what actually keeps the two copies' word order in sync;
+// the visible code is just that same value made human-legible.
+const MATCH_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+function generateMatchCode() {
+  let code = "";
+  for (let i = 0; i < 4; i++) {
+    code += MATCH_CODE_ALPHABET[Math.floor(Math.random() * MATCH_CODE_ALPHABET.length)];
+  }
+  return code;
+}
+
+/** Deterministic PRNG seeded from a string (mulberry32) - the same seed
+ * always produces the same sequence, so Teacher and Student requests (or
+ * the same request replayed later) land on identical shuffle order as
+ * long as they're given the same match code. */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function rng() {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function hashSeed(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** Fisher-Yates - uniform random shuffle, in place. `rng` defaults to
+ * Math.random (genuinely random); pass a seeded one for reproducible
+ * order. */
+function shuffle(arr, rng = Math.random) {
   for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
 }
@@ -34005,8 +34083,15 @@ function shuffle(arr) {
  *     narrow a category down, kept alongside the newer per-word picker.
  * Categories not present in `filters`, or with an empty `include`, use
  * every word as before.
+ *
+ * `matchCode`, if given, seeds the shuffle so a Student copy generated
+ * from a separate call with the same code lands on the exact same word
+ * order as the Teacher copy - see generateMatchCode() above. Omit it to
+ * get a fresh random code back on `result.matchCode` (and a genuinely
+ * random shuffle), for one-off calls that don't need to be paired with
+ * another.
  */
-function assemble(categoryIds, filters = {}) {
+function assemble(categoryIds, filters = {}, matchCode) {
   if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
     throw new InvalidSelectionError("Select at least one category.");
   }
@@ -34043,7 +34128,8 @@ function assemble(categoryIds, filters = {}) {
   const words = filtered.flatMap((f) =>
     f.wordList.map((text) => ({ text, categoryNumber: f.categoryNumber }))
   );
-  shuffle(words);
+  const code = matchCode || generateMatchCode();
+  shuffle(words, mulberry32(hashSeed(code)));
   words.forEach((w, i) => {
     w.rowNumber = i + 1;
   });
@@ -34053,6 +34139,7 @@ function assemble(categoryIds, filters = {}) {
     summary,
     totalWords: words.length,
     totalCategories: summary.length,
+    matchCode: code,
   };
 }
 
@@ -34097,8 +34184,22 @@ function renderInstructions() {
   </section>`;
 }
 
+// Always tracked on every assessment, regardless of which specific word-bank
+// categories were selected - a place to note letter/vowel mistakes in
+// general, in addition to (not instead of) the selected categories below.
+const GENERAL_SKILLS = ["Letters", "Vowels"];
+
 function renderResultsSummary(summary) {
-  const rows = summary
+  const generalRows = GENERAL_SKILLS.map(
+    (name) => `
+      <tr>
+        <td class="num-cell"><span class="cat-badge cat-badge-general">&bull;</span></td>
+        <td class="name-cell">${name}</td>
+        <td class="blank-cell">______</td>
+      </tr>`
+  ).join("\n");
+
+  const categoryRows = summary
     .map(
       (s) => `
       <tr>
@@ -34120,18 +34221,31 @@ function renderResultsSummary(summary) {
           <th>Read Incorrectly</th>
         </tr>
       </thead>
-      <tbody>${rows}</tbody>
+      <tbody>${generalRows}${categoryRows}</tbody>
     </table>
   </section>`;
 }
 
+function renderNotesBox() {
+  return `
+  <section class="notes-box" dir="ltr">
+    <h2>Notes</h2>
+    <div class="notes-lines"><span></span><span></span><span></span></div>
+  </section>`;
+}
+
 function renderWordCell(word, role) {
+  // Sized per-word (not per-document/category) so a lone short letter and a
+  // long multi-syllable word each get a font-size that fits their own text -
+  // the .cell box itself stays a fixed size everywhere (see css()), so
+  // "tier" here only ever changes the text, never the card.
+  const tier = sizeTier([word]);
   const catBadge =
     role === "teacher"
       ? `<span class="cat-num" title="Category ${word.categoryNumber}">${word.categoryNumber}</span>`
       : "";
   return `
-        <div class="cell">
+        <div class="cell tier-${tier}">
           <span class="seq-num">${word.rowNumber}</span>
           ${catBadge}
           <span class="word-text">${escapeHtml(word.text)}</span>
@@ -34145,10 +34259,9 @@ function renderWordGrid(words, role, columns) {
   // still shows which category each word belongs to via the small corner
   // badge renderWordCell() adds per word (see role in that function), and
   // the Results Summary table above still lists every category by name.
-  const tier = sizeTier(words);
   const cells = words.map((w) => renderWordCell(w, role)).join("\n");
   return `
-    <section class="word-grid tier-${tier}">
+    <section class="word-grid">
       <div class="grid" style="grid-template-columns: repeat(${columns}, 1fr);">
         ${cells}
       </div>
@@ -34159,11 +34272,13 @@ function renderMetaFields(role, meta) {
   const fields = [
     { label: "Student Name", value: meta.studentName ? escapeHtml(meta.studentName) : "" },
     { label: "Grade / Class", value: meta.grade ? escapeHtml(meta.grade) : "" },
-    { label: "Date", value: meta.date ? escapeHtml(meta.date) : "" },
   ];
+  if (!meta.hideDate) {
+    fields.push({ label: "Date", value: meta.date ? escapeHtml(meta.date) : "" });
+  }
   if (role === "teacher") {
     fields.push({ label: "Teacher", value: "" });
-    fields.push({ label: "Reading Speed / Time", value: "" });
+    fields.push({ label: "Fluency speed", value: "" });
   }
 
   return `
@@ -34199,8 +34314,8 @@ function css() {
       align-items: baseline;
       justify-content: space-between;
       border-bottom: 2px solid #222;
-      padding-bottom: 6px;
-      margin-bottom: 8px;
+      padding-bottom: 4px;
+      margin-bottom: 5px;
     }
     .doc-header .bh {
       font-size: 13pt;
@@ -34214,6 +34329,16 @@ function css() {
       text-align: center;
       flex: 1;
     }
+    .doc-header .doc-title.doc-code {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 21pt;
+      letter-spacing: 0.18em;
+    }
+    .doc-header .header-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
     .doc-header .role-badge {
       font-size: 10pt;
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -34223,23 +34348,32 @@ function css() {
       border-radius: 10px;
       white-space: nowrap;
     }
+    .doc-header .match-tag {
+      font-size: 9pt;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #7a1f2b;
+      border: 1px solid #7a1f2b;
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
 
     .meta-fields {
       direction: ltr;
       text-align: left;
       display: flex;
       flex-wrap: wrap;
-      gap: 6px 22px;
+      gap: 3px 20px;
       font-family: 'Segoe UI', Arial, sans-serif;
-      font-size: 10.5pt;
+      font-size: 9.5pt;
       border-bottom: 1px solid #999;
-      padding-bottom: 8px;
-      margin-bottom: 10px;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
     }
-    .meta-fields .field { display: flex; gap: 6px; align-items: flex-end; }
+    .meta-fields .field { display: flex; gap: 5px; align-items: flex-end; }
     .meta-fields .field-label { color: #444; }
     .meta-fields .field-value {
-      min-width: 90px;
+      min-width: 80px;
       border-bottom: 1px solid #666;
       padding: 0 4px;
     }
@@ -34249,39 +34383,52 @@ function css() {
       text-align: left;
       border: 1px solid #444;
       border-radius: 8px;
-      padding: 6px 14px 8px;
-      margin-bottom: 8px;
+      padding: 5px 12px 6px;
+      margin-bottom: 6px;
       font-family: 'Segoe UI', Arial, sans-serif;
       page-break-inside: avoid;
     }
-    .instructions h2, .results-summary h2 {
-      font-size: 11.5pt;
-      margin: 0 0 4px;
+    .instructions h2, .results-summary h2, .notes-box h2 {
+      font-size: 10pt;
+      margin: 0 0 3px;
       font-family: 'Segoe UI', Arial, sans-serif;
     }
     .instructions ol {
-      margin: 4px 0 0;
-      padding-inline-start: 20px;
-      font-size: 9.5pt;
-      line-height: 1.3;
+      margin: 3px 0 0;
+      padding-inline-start: 18px;
+      font-size: 8.5pt;
+      line-height: 1.25;
     }
 
-    .results-summary { direction: ltr; text-align: left; margin-bottom: 8px; page-break-inside: avoid; }
+    .results-summary { direction: ltr; text-align: left; margin-bottom: 6px; page-break-inside: avoid; }
     .results-summary table {
       width: 100%;
       border-collapse: collapse;
       font-family: 'Segoe UI', Arial, sans-serif;
-      font-size: 10pt;
+      font-size: 9pt;
     }
     .results-summary th, .results-summary td {
       border: 1px solid #888;
-      padding: 3px 8px;
+      padding: 2px 7px;
       text-align: center;
     }
     .results-summary th { background: #eee; }
     .results-summary .num-cell { width: 32px; }
-    .results-summary .name-cell { text-align: left; font-family: 'Segoe UI', Arial, sans-serif; font-size: 10pt; }
+    .results-summary .name-cell { text-align: left; font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; }
     .results-summary .blank-cell { color: #555; width: 120px; }
+
+    .notes-box {
+      direction: ltr;
+      text-align: left;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 5px 12px 7px;
+      margin-bottom: 6px;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      page-break-inside: avoid;
+    }
+    .notes-lines { display: flex; flex-direction: column; gap: 11pt; margin-top: 2pt; }
+    .notes-lines span { display: block; height: 0; border-bottom: 1px solid #999; }
 
     .cat-badge {
       display: inline-flex;
@@ -34295,6 +34442,7 @@ function css() {
       font-size: 9.5pt;
       font-family: 'Segoe UI', Arial, sans-serif;
     }
+    .cat-badge-general { background: #555; }
 
     .word-grid { }
 
@@ -34314,6 +34462,13 @@ function css() {
       justify-content: center;
       padding: 0.9em 4px 2px;
       page-break-inside: avoid;
+      /* Fixed card size for every cell, regardless of that word's tier -
+         only the text inside (below) scales per word. Grid rows auto-size
+         to their tallest cell, so this has to clear the xl tier's own
+         content height (its 32pt font-size ceiling plus padding/line
+         height) or an xl cell would still grow past it and stretch just
+         its row taller than the rest. */
+      min-height: 54pt;
     }
     .cell .seq-num {
       position: absolute;
@@ -34343,14 +34498,21 @@ function css() {
       line-height: 1.15;
     }
 
-    .tier-xl .cell { min-height: 40pt; }
-    .tier-xl .word-text { font-size: clamp(16pt, 26cqw, 32pt); }
-    .tier-lg .cell { min-height: 36pt; }
-    .tier-lg .word-text { font-size: clamp(13pt, 20cqw, 25pt); }
-    .tier-md .cell { min-height: 32pt; }
-    .tier-md .word-text { font-size: clamp(11pt, 15cqw, 19pt); }
-    .tier-sm .cell { min-height: 28pt; }
-    .tier-sm .word-text { font-size: clamp(9.5pt, 11cqw, 15pt); }
+    .cell.tier-xl .word-text { font-size: clamp(16pt, 26cqw, 32pt); }
+    .cell.tier-lg .word-text { font-size: clamp(13pt, 20cqw, 25pt); }
+    .cell.tier-md .word-text { font-size: clamp(11pt, 15cqw, 19pt); }
+    .cell.tier-sm .word-text { font-size: clamp(9.5pt, 11cqw, 15pt); }
+
+    /* Student copy: bigger and bolder than Teacher's, since the student is
+       the one actually reading it. The cell box grows to match the larger
+       xl-tier ceiling (see the base .cell min-height comment above for how
+       that number is derived). */
+    .role-student .word-text { font-weight: 700; }
+    .role-student .cell { min-height: 60pt; }
+    .role-student .cell.tier-xl .word-text { font-size: clamp(18pt, 29cqw, 35pt); }
+    .role-student .cell.tier-lg .word-text { font-size: clamp(15pt, 22cqw, 27pt); }
+    .role-student .cell.tier-md .word-text { font-size: clamp(12.5pt, 17cqw, 21pt); }
+    .role-student .cell.tier-sm .word-text { font-size: clamp(11pt, 12.5cqw, 16.5pt); }
 
   `;
 }
@@ -34360,6 +34522,18 @@ function buildHtml({ role, assembled, meta = {} }) {
   const columns = Math.min(Math.max(Number(meta.columns) || 3, 2), 8);
   const roleLabel = role === "teacher" ? "Teacher Copy" : "Student Copy";
   const orientation = meta.orientation === "landscape" ? "landscape" : "portrait";
+  const matchCode = assembled.matchCode ? escapeHtml(assembled.matchCode) : "";
+
+  // The Student copy shows the pairing code instead of the descriptive
+  // title, so a student can't read what's being assessed off their own
+  // page - the Teacher copy keeps the real title and shows the same code
+  // as a small tag instead, to pair the two back up after handing them out.
+  const titleHtml =
+    role === "student" && matchCode
+      ? `<h1 class="doc-title doc-code">${matchCode}</h1>`
+      : `<h1 class="doc-title">${title}</h1>`;
+  const matchTagHtml =
+    role === "teacher" && matchCode ? `<span class="match-tag">Code ${matchCode}</span>` : "";
 
   return `<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -34371,15 +34545,19 @@ function buildHtml({ role, assembled, meta = {} }) {
   ${css()}
 </style>
 </head>
-<body>
+<body class="role-${role}">
   <div class="doc-header">
     <span class="bh">ב"ה</span>
-    <h1 class="doc-title">${title}</h1>
-    <span class="role-badge">${roleLabel}</span>
+    ${titleHtml}
+    <div class="header-right">
+      ${matchTagHtml}
+      <span class="role-badge">${roleLabel}</span>
+    </div>
   </div>
   ${renderMetaFields(role, meta)}
   ${role === "teacher" ? renderInstructions() : ""}
   ${role === "teacher" ? renderResultsSummary(assembled.summary) : ""}
+  ${role === "teacher" ? renderNotesBox() : ""}
   ${renderWordGrid(assembled.words, role, columns)}
 </body>
 </html>`;
@@ -34403,6 +34581,7 @@ const {
   Footer,
   PageNumber,
   PageOrientation,
+  HeightRule,
   convertInchesToTwip,
 } = docx;
 
@@ -34453,22 +34632,43 @@ function scaledTierSize(tier, columns) {
   return Math.max(16, Math.round(raw / 2) * 2);
 }
 
-function titleBlock(title, roleLabel) {
+function titleBlock(title, roleLabel, role, matchCode) {
+  // The Student copy shows the pairing code instead of the descriptive
+  // title (so a student can't read what's being assessed off their own
+  // page); the Teacher copy keeps the real title and gets the same code
+  // appended to the byline instead, to pair the two back up later.
+  const headingText = role === "student" && matchCode ? matchCode : title;
+  const bylineRuns = [
+    new TextRun({ text: 'ב"ה', font: FONT, size: 20, color: GRAY }),
+    new TextRun({ text: "   •   ", size: 18, color: GRAY, font: UI_FONT }),
+    new TextRun({ text: roleLabel, italics: true, size: 18, color: GRAY, font: UI_FONT }),
+  ];
+  if (role === "teacher" && matchCode) {
+    bylineRuns.push(
+      new TextRun({ text: "   •   ", size: 18, color: GRAY, font: UI_FONT }),
+      new TextRun({ text: `Code ${matchCode}`, bold: true, size: 18, color: ACCENT, font: UI_FONT })
+    );
+  }
+
   return [
     new Paragraph({
       alignment: AlignmentType.CENTER,
       bidirectional: true,
       spacing: { after: 40 },
-      children: [new TextRun({ text: title, bold: true, size: 34, font: FONT })],
+      children: [
+        new TextRun({
+          text: headingText,
+          bold: true,
+          size: role === "student" && matchCode ? 30 : 34,
+          font: role === "student" && matchCode ? UI_FONT : FONT,
+          characterSpacing: role === "student" && matchCode ? 40 : undefined,
+        }),
+      ],
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { after: 200 },
-      children: [
-        new TextRun({ text: 'ב"ה', font: FONT, size: 20, color: GRAY }),
-        new TextRun({ text: "   •   ", size: 18, color: GRAY, font: UI_FONT }),
-        new TextRun({ text: roleLabel, italics: true, size: 18, color: GRAY, font: UI_FONT }),
-      ],
+      spacing: { after: 120 },
+      children: bylineRuns,
     }),
   ];
 }
@@ -34477,11 +34677,13 @@ function metaFieldsTable(role, meta, usableWidth) {
   const fields = [
     { label: "Student Name", value: meta.studentName || "" },
     { label: "Grade / Class", value: meta.grade || "" },
-    { label: "Date", value: meta.date || "" },
   ];
+  if (!meta.hideDate) {
+    fields.push({ label: "Date", value: meta.date || "" });
+  }
   if (role === "teacher") {
     fields.push({ label: "Teacher", value: "" });
-    fields.push({ label: "Reading Speed / Time", value: "" });
+    fields.push({ label: "Fluency speed", value: "" });
   }
 
   const cellWidth = Math.floor(usableWidth / fields.length);
@@ -34520,9 +34722,9 @@ function instructionsBlock() {
   const heading = new Paragraph({
     alignment: AlignmentType.LEFT,
     border: BOX_PARAGRAPH_BORDER,
-    spacing: { before: 80, after: 40 },
+    spacing: { before: 60, after: 30 },
     children: [
-      new TextRun({ text: "Teacher Testing Instructions", bold: true, size: 22, font: UI_FONT }),
+      new TextRun({ text: "Teacher Testing Instructions", bold: true, size: 20, font: UI_FONT }),
     ],
   });
 
@@ -34532,8 +34734,8 @@ function instructionsBlock() {
         alignment: AlignmentType.LEFT,
         border: BOX_PARAGRAPH_BORDER,
         indent: { left: 200, right: 200 },
-        spacing: { after: i === TEACHER_INSTRUCTIONS.length - 1 ? 100 : 0 },
-        children: [new TextRun({ text: `${i + 1}. ${line}`, size: 18, font: UI_FONT })],
+        spacing: { after: i === TEACHER_INSTRUCTIONS.length - 1 ? 80 : 0 },
+        children: [new TextRun({ text: `${i + 1}. ${line}`, size: 16, font: UI_FONT })],
       })
   );
 
@@ -34552,39 +34754,52 @@ function resultsSummaryTable(summary, usableWidth) {
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text, bold: true, size: 18, font: UI_FONT })],
+              children: [new TextRun({ text, bold: true, size: 16, font: UI_FONT })],
             }),
           ],
         })
     ),
   });
 
-  const rows = summary.map((s) => {
-    const cell = (text, opts = {}) =>
-      new TableCell({
-        borders: GRID_CELL_BORDERS,
-        verticalAlign: VerticalAlign.CENTER,
-        children: [
-          new Paragraph({
-            alignment: opts.align || AlignmentType.CENTER,
-            children: [new TextRun({ text: String(text), size: 18, font: opts.font || UI_FONT, bold: !!opts.bold, color: opts.color })],
-          }),
-        ],
-      });
-
-    return new TableRow({
+  const cell = (text, opts = {}) =>
+    new TableCell({
+      borders: GRID_CELL_BORDERS,
+      verticalAlign: VerticalAlign.CENTER,
+      shading: opts.shading ? { fill: opts.shading } : undefined,
       children: [
-        cell(s.categoryNumber, { color: ACCENT, bold: true }),
-        cell(s.categoryName, { font: UI_FONT, bold: true, align: AlignmentType.LEFT }),
-        cell(`______ / ${s.count}`),
+        new Paragraph({
+          alignment: opts.align || AlignmentType.CENTER,
+          children: [new TextRun({ text: String(text), size: 16, font: opts.font || UI_FONT, bold: !!opts.bold, color: opts.color })],
+        }),
       ],
     });
-  });
+
+  const generalRows = GENERAL_SKILLS.map(
+    (name) =>
+      new TableRow({
+        children: [
+          cell("•", { color: GRAY, bold: true, shading: "F2F2F2" }),
+          cell(name, { font: UI_FONT, bold: true, align: AlignmentType.LEFT, shading: "F2F2F2" }),
+          cell("______", { shading: "F2F2F2" }),
+        ],
+      })
+  );
+
+  const categoryRows = summary.map(
+    (s) =>
+      new TableRow({
+        children: [
+          cell(s.categoryNumber, { color: ACCENT, bold: true }),
+          cell(s.categoryName, { font: UI_FONT, bold: true, align: AlignmentType.LEFT }),
+          cell(`______ / ${s.count}`),
+        ],
+      })
+  );
 
   const heading = new Paragraph({
     alignment: AlignmentType.LEFT,
-    spacing: { before: 100, after: 40 },
-    children: [new TextRun({ text: "Results Summary", bold: true, size: 22, font: UI_FONT })],
+    spacing: { before: 80, after: 30 },
+    children: [new TextRun({ text: "Results Summary", bold: true, size: 20, font: UI_FONT })],
   });
 
   const table = new Table({
@@ -34594,10 +34809,39 @@ function resultsSummaryTable(summary, usableWidth) {
       Math.floor(usableWidth * 0.65),
       Math.floor(usableWidth * 0.25),
     ],
-    rows: [headerRow, ...rows],
+    rows: [headerRow, ...generalRows, ...categoryRows],
   });
 
   return [heading, table];
+}
+
+function notesBoxBlock() {
+  const heading = new Paragraph({
+    alignment: AlignmentType.LEFT,
+    border: BOX_PARAGRAPH_BORDER,
+    spacing: { before: 60, after: 30 },
+    children: [new TextRun({ text: "Notes", bold: true, size: 20, font: UI_FONT })],
+  });
+
+  // Same border on every paragraph in the sequence (matching
+  // instructionsBlock's pattern) so Word merges them into one continuous
+  // box rather than drawing a frame around each line separately. A ruled
+  // bottom edge on each blank line gives the teacher somewhere to write.
+  const lineBorder = {
+    ...BOX_PARAGRAPH_BORDER,
+    bottom: { style: BorderStyle.SINGLE, size: 4, color: "999999" },
+  };
+  const lines = [0, 1, 2].map(
+    (i) =>
+      new Paragraph({
+        border: i === 2 ? BOX_PARAGRAPH_BORDER : lineBorder,
+        indent: { left: 200, right: 200 },
+        spacing: { after: 220 },
+        children: [new TextRun({ text: " ", size: 16, font: UI_FONT })],
+      })
+  );
+
+  return [heading, ...lines];
 }
 
 function chunk(arr, size) {
@@ -34606,11 +34850,22 @@ function chunk(arr, size) {
   return out;
 }
 
-function wordCell(word, role, columns, tier, cellWidth) {
-  const wordSize = scaledTierSize(tier, columns);
+// Student copy: bigger and bolder than Teacher's, since the student is the
+// one actually reading it.
+const STUDENT_SIZE_SCALE = 1.12;
+
+function wordCell(word, role, columns, cellWidth) {
+  // Sized per-word (not per-document) so a lone short letter and a long
+  // multi-syllable word each get a font-size that fits their own text - the
+  // cell's row height (see wordGridBlocks) stays fixed everywhere, so this
+  // only ever changes the text, never the card.
+  const tier = sizeTier([word]);
+  const isStudent = role === "student";
+  let wordSize = scaledTierSize(tier, columns);
+  if (isStudent) wordSize = Math.max(16, Math.round((wordSize * STUDENT_SIZE_SCALE) / 2) * 2);
   const seqRun = new TextRun({ text: String(word.rowNumber), size: 15, color: "888888", font: UI_FONT });
 
-  const wordRunChildren = [new TextRun({ text: word.text, size: wordSize, font: FONT })];
+  const wordRunChildren = [new TextRun({ text: word.text, size: wordSize, font: FONT, bold: isStudent })];
   if (role === "teacher") {
     wordRunChildren.push(
       new TextRun({
@@ -34652,11 +34907,16 @@ function wordGridBlocks(words, role, columns, usableWidth) {
   // number wordCell() adds per word (see role in that function), and the
   // Results Summary table above still lists every category by name.
   const cellWidth = Math.floor(usableWidth / columns);
-  const tier = sizeTier(words);
+  // Fixed minimum row height so every card is the same size regardless of
+  // which word (and therefore which tier) lands in it - generous enough to
+  // fit the largest tier's text at the smallest allowed column count (2).
+  // The Student copy's text runs bigger (see STUDENT_SIZE_SCALE), so its
+  // rows need proportionally more room.
+  const rowHeight = { value: role === "student" ? 1250 : 1100, rule: HeightRule.ATLEAST };
   const rows = chunk(words, columns).map((rowWords) => {
-    const cells = rowWords.map((w) => wordCell(w, role, columns, tier, cellWidth));
+    const cells = rowWords.map((w) => wordCell(w, role, columns, cellWidth));
     while (cells.length < columns) cells.push(emptyCell(cellWidth));
-    return new TableRow({ cantSplit: true, children: cells });
+    return new TableRow({ cantSplit: true, height: rowHeight, children: cells });
   });
 
   const blocks = [
@@ -34693,15 +34953,17 @@ async function renderDocx({ role, assembled, meta = {} }) {
   const roleLabel = role === "teacher" ? "Teacher Copy" : "Student Copy";
   const orientation = meta.orientation === "landscape" ? "landscape" : "portrait";
   const usableWidth = usableWidthTwip(orientation);
+  const matchCode = assembled.matchCode || "";
 
   const children = [
-    ...titleBlock(title, roleLabel),
+    ...titleBlock(title, roleLabel, role, matchCode),
     metaFieldsTable(role, meta, usableWidth),
   ];
 
   if (role === "teacher") {
     children.push(...instructionsBlock());
     children.push(...resultsSummaryTable(assembled.summary, usableWidth));
+    children.push(...notesBoxBlock());
   }
 
   children.push(...wordGridBlocks(assembled.words, role, columns, usableWidth));
@@ -34861,17 +35123,42 @@ function updateFavicon(dataUrl) {
     return a < b ? -1 : a > b ? 1 : 0;
   }
 
-  // Section dividers for the category list, keyed by each category's
-  // canonical order (from categories.json) - a light scanning aid that
-  // mirrors the word bank's own sequence rather than an invented taxonomy.
-  const GROUP_BREAKS = {
-    1: "Letters & Nekudot",
-    4: "Silent Letters",
-    7: "Yud/Vav Endings",
-    8: "Sheva Rules",
-    17: "Shuruk & Dagesh",
-    21: "Shared Dot",
-    22: "Word Endings",
+  // Groups the category picker into collapsible sections matching the
+  // curriculum's own skill areas, keyed by each category's id - shown only
+  // for the built-in word bank (see usingDefaultData in renderCategoryList),
+  // since an imported spreadsheet's categories won't match this id list.
+  const CATEGORY_GROUP_ORDER = ["Letters", "Vowels", "Vowel - Letter Blend", "Exception Rules", "Sheva Rules"];
+  const CATEGORY_GROUPS = {
+    "c01-letters-3x": "Letters",
+    "c02-nekudot": "Vowels",
+    "c03-basic-dotted-letters": "Vowel - Letter Blend",
+    "c29-nekudot-letter-blend": "Vowel - Letter Blend",
+    "c04-silent-letters-alef": "Exception Rules",
+    "c05-silent-letters-yud": "Exception Rules",
+    "c06-silent-letters-vav": "Exception Rules",
+    "c07-yud-vav-ending": "Exception Rules",
+    "c08-sheva-in-begining": "Sheva Rules",
+    "c09-sheva-in-middle": "Sheva Rules",
+    "c10-g2-sheva-in-middle-under": "Sheva Rules",
+    "c11-shva-in-end": "Sheva Rules",
+    "c12-2-shva-at-the-end": "Sheva Rules",
+    "c13-shva-under-dagesh": "Sheva Rules",
+    "c14-g2-sheva-after-shuruk-in-beg": "Sheva Rules",
+    "c15-g2-sheva-after-sheva": "Sheva Rules",
+    "c16-g2-sheva-under-twin-letters": "Sheva Rules",
+    "c17-shuruk-in-begining": "Sheva Rules",
+    "c18-confusing-dagesh-vav-vs-shuruk": "Exception Rules",
+    "c19-confusing-dagesh-shared-nekudah-dot-shin-sin": "Exception Rules",
+    "c20-confusing-dagesh-vav-vs-cholam-g2": "Exception Rules",
+    "c21-shared-dot": "Exception Rules",
+    "c22-kamatz-yud-ending": "Exception Rules",
+    "c23-patach-yud-ending": "Exception Rules",
+    "c24-silent-letter-and-yud-endings-g2": "Exception Rules",
+    "c25-shuruk-yud-ending-g2": "Exception Rules",
+    "c26-patach-genuvah-chet-g2": "Exception Rules",
+    "c27-patach-genuvah-hey-g2": "Exception Rules",
+    "c28-mapik-hey-hey-endings-g2": "Exception Rules",
+    "c30-cholam-yud-ending-g2": "Exception Rules",
   };
 
   const el = {
@@ -34879,6 +35166,7 @@ function updateFavicon(dataUrl) {
     studentName: document.getElementById("student-name"),
     grade: document.getElementById("student-grade"),
     date: document.getElementById("doc-date"),
+    showDate: document.getElementById("show-date"),
     columns: document.getElementById("columns"),
     orientation: document.getElementById("orientation"),
     categoryList: document.getElementById("category-list"),
@@ -34978,117 +35266,154 @@ function updateFavicon(dataUrl) {
   }
   updateHeaderMeta();
 
-  function renderCategoryList() {
-    el.categoryList.innerHTML = "";
-    for (const cat of CATEGORIES_DATA.categories) {
-      // The section dividers describe this specific curriculum's known
-      // structure, so only show them for the built-in word bank - an
-      // imported spreadsheet's categories won't match that structure.
-      if (state.usingDefaultData && GROUP_BREAKS[cat.order]) {
-        const label = document.createElement("div");
-        label.className = "group-label";
-        label.textContent = GROUP_BREAKS[cat.order];
-        el.categoryList.appendChild(label);
-      }
+  function buildCategoryItem(cat) {
+    const item = document.createElement("div");
+    item.className = "category-item";
 
-      const item = document.createElement("div");
-      item.className = "category-item";
+    const row = document.createElement("label");
+    row.className = "category-row";
+    row.dataset.id = cat.id;
 
-      const row = document.createElement("label");
-      row.className = "category-row";
-      row.dataset.id = cat.id;
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = cat.id;
 
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.value = cat.id;
+    const name = document.createElement("span");
+    name.className = "cat-name";
+    name.textContent = cat.name;
 
-      const name = document.createElement("span");
-      name.className = "cat-name";
-      name.textContent = cat.name;
+    const count = document.createElement("span");
+    count.className = "cat-count";
+    count.textContent = `${cat.count} word${cat.count === 1 ? "" : "s"}`;
 
-      const count = document.createElement("span");
-      count.className = "cat-count";
-      count.textContent = `${cat.count} word${cat.count === 1 ? "" : "s"}`;
+    const badge = document.createElement("span");
+    badge.className = "cat-badge";
+    badge.hidden = true;
 
-      const badge = document.createElement("span");
-      badge.className = "cat-badge";
-      badge.hidden = true;
+    row.append(checkbox, name, count, badge);
+    item.appendChild(row);
 
-      row.append(checkbox, name, count, badge);
-      item.appendChild(row);
+    // Two optional ways to narrow this category down from its full word
+    // list - only worth offering when there's more than one distinct
+    // word/letter, otherwise there's nothing to narrow.
+    const uniqueWords = [...new Set(cat.words)].sort(compareHebrew);
+    if (uniqueWords.length > 1) {
+      // The original approach: just cap how many words to use (the
+      // first N in spreadsheet order), without caring which specific
+      // ones. Left blank, the category behaves exactly as it always
+      // has - every word included.
+      const limitRow = document.createElement("div");
+      limitRow.className = "cat-limit-row";
+      limitRow.hidden = true;
 
-      // Two optional ways to narrow this category down from its full word
-      // list - only worth offering when there's more than one distinct
-      // word/letter, otherwise there's nothing to narrow.
-      const uniqueWords = [...new Set(cat.words)].sort(compareHebrew);
-      if (uniqueWords.length > 1) {
-        // The original approach: just cap how many words to use (the
-        // first N in spreadsheet order), without caring which specific
-        // ones. Left blank, the category behaves exactly as it always
-        // has - every word included.
-        const limitRow = document.createElement("div");
-        limitRow.className = "cat-limit-row";
-        limitRow.hidden = true;
+      const limitLabel = document.createElement("span");
+      limitLabel.textContent = "Or just use the first";
 
-        const limitLabel = document.createElement("span");
-        limitLabel.textContent = "Or just use the first";
+      const limitInput = document.createElement("input");
+      limitInput.type = "number";
+      limitInput.className = "cat-limit";
+      limitInput.min = "1";
+      limitInput.max = String(cat.count);
+      limitInput.placeholder = "all";
+      limitInput.addEventListener("change", () => {
+        if (limitInput.value === "") { updatePreview(); return; }
+        let n = Math.round(Number(limitInput.value));
+        if (!Number.isFinite(n) || n < 1) n = 1;
+        if (n > cat.count) n = cat.count;
+        limitInput.value = String(n);
+        updatePreview();
+      });
 
-        const limitInput = document.createElement("input");
-        limitInput.type = "number";
-        limitInput.className = "cat-limit";
-        limitInput.min = "1";
-        limitInput.max = String(cat.count);
-        limitInput.placeholder = "all";
-        limitInput.addEventListener("change", () => {
-          if (limitInput.value === "") { updatePreview(); return; }
-          let n = Math.round(Number(limitInput.value));
-          if (!Number.isFinite(n) || n < 1) n = 1;
-          if (n > cat.count) n = cat.count;
-          limitInput.value = String(n);
+      const limitSuffix = document.createElement("span");
+      limitSuffix.textContent = `of ${cat.count} words`;
+
+      limitRow.append(limitLabel, limitInput, limitSuffix);
+      item.appendChild(limitRow);
+
+      // The newer approach: pick exactly which words/letters to
+      // include - e.g. "Letters (3x)" repeats every letter 3 times,
+      // and only some of those letters may need testing. Chips start
+      // unselected (the whole category is still used, untouched - see
+      // getCategoryFilters()); clicking a chip *adds* it to the
+      // assessment rather than starting from everything and removing
+      // ones you don't want.
+      const pickerRow = document.createElement("div");
+      pickerRow.className = "cat-picker-row";
+      pickerRow.hidden = true;
+
+      for (const word of uniqueWords) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "word-chip";
+        chip.textContent = word;
+        chip.dataset.word = word;
+        chip.setAttribute("aria-pressed", "false");
+        chip.title = "Click to include only this (and other selected) word/letter";
+        chip.addEventListener("click", () => {
+          const active = chip.classList.toggle("active");
+          chip.setAttribute("aria-pressed", String(active));
           updatePreview();
         });
-
-        const limitSuffix = document.createElement("span");
-        limitSuffix.textContent = `of ${cat.count} words`;
-
-        limitRow.append(limitLabel, limitInput, limitSuffix);
-        item.appendChild(limitRow);
-
-        // The newer approach: pick exactly which words/letters to
-        // include - e.g. "Letters (3x)" repeats every letter 3 times,
-        // and only some of those letters may need testing. Chips start
-        // unselected (the whole category is still used, untouched - see
-        // getCategoryFilters()); clicking a chip *adds* it to the
-        // assessment rather than starting from everything and removing
-        // ones you don't want.
-        const pickerRow = document.createElement("div");
-        pickerRow.className = "cat-picker-row";
-        pickerRow.hidden = true;
-
-        for (const word of uniqueWords) {
-          const chip = document.createElement("button");
-          chip.type = "button";
-          chip.className = "word-chip";
-          chip.textContent = word;
-          chip.dataset.word = word;
-          chip.setAttribute("aria-pressed", "false");
-          chip.title = "Click to include only this (and other selected) word/letter";
-          chip.addEventListener("click", () => {
-            const active = chip.classList.toggle("active");
-            chip.setAttribute("aria-pressed", String(active));
-            updatePreview();
-          });
-          pickerRow.appendChild(chip);
-        }
-        item.appendChild(pickerRow);
-
-        checkbox.addEventListener("change", () => {
-          limitRow.hidden = !checkbox.checked;
-          pickerRow.hidden = !checkbox.checked;
-        });
+        pickerRow.appendChild(chip);
       }
+      item.appendChild(pickerRow);
 
-      el.categoryList.appendChild(item);
+      checkbox.addEventListener("change", () => {
+        limitRow.hidden = !checkbox.checked;
+        pickerRow.hidden = !checkbox.checked;
+      });
+    }
+
+    return item;
+  }
+
+  function renderCategoryList() {
+    el.categoryList.innerHTML = "";
+
+    // The 5-group taxonomy describes this specific curriculum's known
+    // structure, so only group by it for the built-in word bank - an
+    // imported spreadsheet's categories won't match this id list, and
+    // fall back to one flat list for those instead.
+    if (!state.usingDefaultData) {
+      for (const cat of CATEGORIES_DATA.categories) {
+        el.categoryList.appendChild(buildCategoryItem(cat));
+      }
+      return;
+    }
+
+    const byGroup = new Map(CATEGORY_GROUP_ORDER.map((name) => [name, []]));
+    for (const cat of CATEGORIES_DATA.categories) {
+      const groupName = CATEGORY_GROUPS[cat.id];
+      if (byGroup.has(groupName)) byGroup.get(groupName).push(cat);
+      else byGroup.set(groupName || "Other", [...(byGroup.get(groupName || "Other") || []), cat]);
+    }
+
+    for (const [groupName, cats] of byGroup) {
+      if (cats.length === 0) continue;
+
+      const details = document.createElement("details");
+      details.className = "cat-group";
+
+      const summary = document.createElement("summary");
+      summary.className = "cat-group-summary";
+
+      const summaryName = document.createElement("span");
+      summaryName.className = "cat-group-name";
+      summaryName.textContent = groupName;
+
+      const summaryCount = document.createElement("span");
+      summaryCount.className = "cat-group-count";
+      summaryCount.textContent = `${cats.length} categor${cats.length === 1 ? "y" : "ies"}`;
+
+      summary.append(summaryName, summaryCount);
+      details.appendChild(summary);
+
+      const body = document.createElement("div");
+      body.className = "cat-group-body";
+      for (const cat of cats) body.appendChild(buildCategoryItem(cat));
+      details.appendChild(body);
+
+      el.categoryList.appendChild(details);
     }
   }
 
@@ -35216,9 +35541,25 @@ function updateFavicon(dataUrl) {
       studentName: el.studentName.value.trim(),
       grade: el.grade.value.trim(),
       date: el.date.value.trim(),
+      hideDate: !el.showDate.checked,
       columns: Number(el.columns.value) || 4,
       orientation: el.orientation.value === "landscape" ? "landscape" : "portrait",
     };
+  }
+
+  // A short code shown on both the Teacher and Student copy so they can be
+  // paired back up, and reused as the word-shuffle seed so switching
+  // preview tabs, printing, or downloading Teacher then Student for the
+  // *same* selection always shows the same word order (see assemble()'s
+  // matchCode param). Only regenerated when the selection/filters actually
+  // change - a fresh assessment gets a fresh code and shuffle.
+  let matchCodeCache = null; // { signature, code }
+  function getMatchCode(categoryIds, filters) {
+    const signature = JSON.stringify({ categoryIds, filters });
+    if (!matchCodeCache || matchCodeCache.signature !== signature) {
+      matchCodeCache = { signature, code: generateMatchCode() };
+    }
+    return matchCodeCache.code;
   }
 
   function setStatus(message, kind) {
@@ -35247,7 +35588,8 @@ function updateFavicon(dataUrl) {
     }
 
     try {
-      const assembled = assemble(categoryIds, getCategoryFilters());
+      const filters = getCategoryFilters();
+      const assembled = assemble(categoryIds, filters, getMatchCode(categoryIds, filters));
       const html = buildHtml({ role: state.previewRole, assembled, meta: buildMeta() });
       el.previewFrame.srcdoc = html;
       el.previewFrame.hidden = false;
@@ -35277,7 +35619,8 @@ function updateFavicon(dataUrl) {
 
   function printDocument(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds, getCategoryFilters());
+    const filters = getCategoryFilters();
+    const assembled = assemble(categoryIds, filters, getMatchCode(categoryIds, filters));
     const meta = buildMeta();
     const html = buildHtml({ role, assembled, meta });
 
@@ -35292,7 +35635,8 @@ function updateFavicon(dataUrl) {
 
   async function downloadWord(role) {
     const categoryIds = getSelectedCategoryIds();
-    const assembled = assemble(categoryIds, getCategoryFilters());
+    const filters = getCategoryFilters();
+    const assembled = assemble(categoryIds, filters, getMatchCode(categoryIds, filters));
     const meta = buildMeta();
     const blob = await renderDocx({ role, assembled, meta });
     const filename = filenameFor({ title: meta.title, role, format: "docx", date: meta.date });
@@ -35373,6 +35717,7 @@ function updateFavicon(dataUrl) {
   });
   [el.title, el.studentName, el.grade, el.date, el.columns].forEach((input) => input.addEventListener("input", updatePreview));
   el.orientation.addEventListener("change", updatePreview);
+  el.showDate.addEventListener("change", updatePreview);
   document.querySelectorAll('input[name="format"]').forEach((r) =>
     r.addEventListener("change", () => {
       setStatus("");

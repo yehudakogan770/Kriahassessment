@@ -16,7 +16,18 @@ function clampText(value, maxLen) {
 }
 
 function parseRequest(body) {
-  const { categoryIds, role, columns, studentName, grade, date, title, orientation } = body || {};
+  const {
+    categoryIds,
+    role,
+    columns,
+    studentName,
+    grade,
+    date,
+    title,
+    orientation,
+    hideDate,
+    matchCode,
+  } = body || {};
 
   if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
     throw new ValidationError("categoryIds must be a non-empty array.");
@@ -33,22 +44,29 @@ function parseRequest(body) {
     studentName: clampText(studentName, 80),
     grade: clampText(grade, 40),
     date: clampText(date, 40),
+    hideDate: !!hideDate,
     columns: Math.min(Math.max(Number(columns) || 3, 2), 8),
     orientation: orientation === "landscape" ? "landscape" : "portrait",
   };
 
-  return { categoryIds, role, meta };
+  // Lets a Teacher and Student request generated separately still land on
+  // the same shuffled word order and pairing code - see assemble()'s
+  // matchCode param. Not required: omitted, assemble() just makes up a
+  // fresh one.
+  const matchCodeClean = clampText(matchCode, 20) || undefined;
+
+  return { categoryIds, role, meta, matchCode: matchCodeClean };
 }
 
 router.post("/generate", async (req, res) => {
   try {
-    const { categoryIds, role, meta } = parseRequest(req.body);
+    const { categoryIds, role, meta, matchCode } = parseRequest(req.body);
     const format = req.body?.format;
     if (format !== "pdf" && format !== "docx") {
       throw new ValidationError('format must be "pdf" or "docx".');
     }
 
-    const assembled = assemble(categoryIds);
+    const assembled = assemble(categoryIds, {}, matchCode);
     const buffer =
       format === "pdf"
         ? await renderPdf({ role, assembled, meta })
@@ -69,8 +87,8 @@ router.post("/generate", async (req, res) => {
 
 router.post("/preview", (req, res) => {
   try {
-    const { categoryIds, role, meta } = parseRequest(req.body);
-    const assembled = assemble(categoryIds);
+    const { categoryIds, role, meta, matchCode } = parseRequest(req.body);
+    const assembled = assemble(categoryIds, {}, matchCode);
     const html = buildHtml({ role, assembled, meta });
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(html);

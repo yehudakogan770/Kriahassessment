@@ -14,9 +14,10 @@ const {
   Footer,
   PageNumber,
   PageOrientation,
+  HeightRule,
   convertInchesToTwip,
 } = require("docx");
-const { sizeTier } = require("./htmlTemplate");
+const { sizeTier, GENERAL_SKILLS } = require("./htmlTemplate");
 const { TEACHER_INSTRUCTIONS } = require("./instructions");
 
 const FONT = "David";
@@ -66,22 +67,43 @@ function scaledTierSize(tier, columns) {
   return Math.max(16, Math.round(raw / 2) * 2);
 }
 
-function titleBlock(title, roleLabel) {
+function titleBlock(title, roleLabel, role, matchCode) {
+  // The Student copy shows the pairing code instead of the descriptive
+  // title (so a student can't read what's being assessed off their own
+  // page); the Teacher copy keeps the real title and gets the same code
+  // appended to the byline instead, to pair the two back up later.
+  const headingText = role === "student" && matchCode ? matchCode : title;
+  const bylineRuns = [
+    new TextRun({ text: 'ב"ה', font: FONT, size: 20, color: GRAY }),
+    new TextRun({ text: "   •   ", size: 18, color: GRAY, font: UI_FONT }),
+    new TextRun({ text: roleLabel, italics: true, size: 18, color: GRAY, font: UI_FONT }),
+  ];
+  if (role === "teacher" && matchCode) {
+    bylineRuns.push(
+      new TextRun({ text: "   •   ", size: 18, color: GRAY, font: UI_FONT }),
+      new TextRun({ text: `Code ${matchCode}`, bold: true, size: 18, color: ACCENT, font: UI_FONT })
+    );
+  }
+
   return [
     new Paragraph({
       alignment: AlignmentType.CENTER,
       bidirectional: true,
       spacing: { after: 40 },
-      children: [new TextRun({ text: title, bold: true, size: 34, font: FONT })],
+      children: [
+        new TextRun({
+          text: headingText,
+          bold: true,
+          size: role === "student" && matchCode ? 30 : 34,
+          font: role === "student" && matchCode ? UI_FONT : FONT,
+          characterSpacing: role === "student" && matchCode ? 40 : undefined,
+        }),
+      ],
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { after: 200 },
-      children: [
-        new TextRun({ text: 'ב"ה', font: FONT, size: 20, color: GRAY }),
-        new TextRun({ text: "   •   ", size: 18, color: GRAY, font: UI_FONT }),
-        new TextRun({ text: roleLabel, italics: true, size: 18, color: GRAY, font: UI_FONT }),
-      ],
+      spacing: { after: 120 },
+      children: bylineRuns,
     }),
   ];
 }
@@ -90,11 +112,13 @@ function metaFieldsTable(role, meta, usableWidth) {
   const fields = [
     { label: "Student Name", value: meta.studentName || "" },
     { label: "Grade / Class", value: meta.grade || "" },
-    { label: "Date", value: meta.date || "" },
   ];
+  if (!meta.hideDate) {
+    fields.push({ label: "Date", value: meta.date || "" });
+  }
   if (role === "teacher") {
     fields.push({ label: "Teacher", value: "" });
-    fields.push({ label: "Reading Speed / Time", value: "" });
+    fields.push({ label: "Fluency speed", value: "" });
   }
 
   const cellWidth = Math.floor(usableWidth / fields.length);
@@ -133,9 +157,9 @@ function instructionsBlock() {
   const heading = new Paragraph({
     alignment: AlignmentType.LEFT,
     border: BOX_PARAGRAPH_BORDER,
-    spacing: { before: 80, after: 40 },
+    spacing: { before: 60, after: 30 },
     children: [
-      new TextRun({ text: "Teacher Testing Instructions", bold: true, size: 22, font: UI_FONT }),
+      new TextRun({ text: "Teacher Testing Instructions", bold: true, size: 20, font: UI_FONT }),
     ],
   });
 
@@ -145,8 +169,8 @@ function instructionsBlock() {
         alignment: AlignmentType.LEFT,
         border: BOX_PARAGRAPH_BORDER,
         indent: { left: 200, right: 200 },
-        spacing: { after: i === TEACHER_INSTRUCTIONS.length - 1 ? 100 : 0 },
-        children: [new TextRun({ text: `${i + 1}. ${line}`, size: 18, font: UI_FONT })],
+        spacing: { after: i === TEACHER_INSTRUCTIONS.length - 1 ? 80 : 0 },
+        children: [new TextRun({ text: `${i + 1}. ${line}`, size: 16, font: UI_FONT })],
       })
   );
 
@@ -165,39 +189,52 @@ function resultsSummaryTable(summary, usableWidth) {
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text, bold: true, size: 18, font: UI_FONT })],
+              children: [new TextRun({ text, bold: true, size: 16, font: UI_FONT })],
             }),
           ],
         })
     ),
   });
 
-  const rows = summary.map((s) => {
-    const cell = (text, opts = {}) =>
-      new TableCell({
-        borders: GRID_CELL_BORDERS,
-        verticalAlign: VerticalAlign.CENTER,
-        children: [
-          new Paragraph({
-            alignment: opts.align || AlignmentType.CENTER,
-            children: [new TextRun({ text: String(text), size: 18, font: opts.font || UI_FONT, bold: !!opts.bold, color: opts.color })],
-          }),
-        ],
-      });
-
-    return new TableRow({
+  const cell = (text, opts = {}) =>
+    new TableCell({
+      borders: GRID_CELL_BORDERS,
+      verticalAlign: VerticalAlign.CENTER,
+      shading: opts.shading ? { fill: opts.shading } : undefined,
       children: [
-        cell(s.categoryNumber, { color: ACCENT, bold: true }),
-        cell(s.categoryName, { font: UI_FONT, bold: true, align: AlignmentType.LEFT }),
-        cell(`______ / ${s.count}`),
+        new Paragraph({
+          alignment: opts.align || AlignmentType.CENTER,
+          children: [new TextRun({ text: String(text), size: 16, font: opts.font || UI_FONT, bold: !!opts.bold, color: opts.color })],
+        }),
       ],
     });
-  });
+
+  const generalRows = GENERAL_SKILLS.map(
+    (name) =>
+      new TableRow({
+        children: [
+          cell("•", { color: GRAY, bold: true, shading: "F2F2F2" }),
+          cell(name, { font: UI_FONT, bold: true, align: AlignmentType.LEFT, shading: "F2F2F2" }),
+          cell("______", { shading: "F2F2F2" }),
+        ],
+      })
+  );
+
+  const categoryRows = summary.map(
+    (s) =>
+      new TableRow({
+        children: [
+          cell(s.categoryNumber, { color: ACCENT, bold: true }),
+          cell(s.categoryName, { font: UI_FONT, bold: true, align: AlignmentType.LEFT }),
+          cell(`______ / ${s.count}`),
+        ],
+      })
+  );
 
   const heading = new Paragraph({
     alignment: AlignmentType.LEFT,
-    spacing: { before: 100, after: 40 },
-    children: [new TextRun({ text: "Results Summary", bold: true, size: 22, font: UI_FONT })],
+    spacing: { before: 80, after: 30 },
+    children: [new TextRun({ text: "Results Summary", bold: true, size: 20, font: UI_FONT })],
   });
 
   const table = new Table({
@@ -207,10 +244,39 @@ function resultsSummaryTable(summary, usableWidth) {
       Math.floor(usableWidth * 0.65),
       Math.floor(usableWidth * 0.25),
     ],
-    rows: [headerRow, ...rows],
+    rows: [headerRow, ...generalRows, ...categoryRows],
   });
 
   return [heading, table];
+}
+
+function notesBoxBlock() {
+  const heading = new Paragraph({
+    alignment: AlignmentType.LEFT,
+    border: BOX_PARAGRAPH_BORDER,
+    spacing: { before: 60, after: 30 },
+    children: [new TextRun({ text: "Notes", bold: true, size: 20, font: UI_FONT })],
+  });
+
+  // Same border on every paragraph in the sequence (matching
+  // instructionsBlock's pattern) so Word merges them into one continuous
+  // box rather than drawing a frame around each line separately. A ruled
+  // bottom edge on each blank line gives the teacher somewhere to write.
+  const lineBorder = {
+    ...BOX_PARAGRAPH_BORDER,
+    bottom: { style: BorderStyle.SINGLE, size: 4, color: "999999" },
+  };
+  const lines = [0, 1, 2].map(
+    (i) =>
+      new Paragraph({
+        border: i === 2 ? BOX_PARAGRAPH_BORDER : lineBorder,
+        indent: { left: 200, right: 200 },
+        spacing: { after: 220 },
+        children: [new TextRun({ text: " ", size: 16, font: UI_FONT })],
+      })
+  );
+
+  return [heading, ...lines];
 }
 
 function chunk(arr, size) {
@@ -219,11 +285,22 @@ function chunk(arr, size) {
   return out;
 }
 
-function wordCell(word, role, columns, tier, cellWidth) {
-  const wordSize = scaledTierSize(tier, columns);
+// Student copy: bigger and bolder than Teacher's, since the student is the
+// one actually reading it.
+const STUDENT_SIZE_SCALE = 1.12;
+
+function wordCell(word, role, columns, cellWidth) {
+  // Sized per-word (not per-document) so a lone short letter and a long
+  // multi-syllable word each get a font-size that fits their own text - the
+  // cell's row height (see wordGridBlocks) stays fixed everywhere, so this
+  // only ever changes the text, never the card.
+  const tier = sizeTier([word]);
+  const isStudent = role === "student";
+  let wordSize = scaledTierSize(tier, columns);
+  if (isStudent) wordSize = Math.max(16, Math.round((wordSize * STUDENT_SIZE_SCALE) / 2) * 2);
   const seqRun = new TextRun({ text: String(word.rowNumber), size: 15, color: "888888", font: UI_FONT });
 
-  const wordRunChildren = [new TextRun({ text: word.text, size: wordSize, font: FONT })];
+  const wordRunChildren = [new TextRun({ text: word.text, size: wordSize, font: FONT, bold: isStudent })];
   if (role === "teacher") {
     wordRunChildren.push(
       new TextRun({
@@ -265,11 +342,16 @@ function wordGridBlocks(words, role, columns, usableWidth) {
   // number wordCell() adds per word (see role in that function), and the
   // Results Summary table above still lists every category by name.
   const cellWidth = Math.floor(usableWidth / columns);
-  const tier = sizeTier(words);
+  // Fixed minimum row height so every card is the same size regardless of
+  // which word (and therefore which tier) lands in it - generous enough to
+  // fit the largest tier's text at the smallest allowed column count (2).
+  // The Student copy's text runs bigger (see STUDENT_SIZE_SCALE), so its
+  // rows need proportionally more room.
+  const rowHeight = { value: role === "student" ? 1250 : 1100, rule: HeightRule.ATLEAST };
   const rows = chunk(words, columns).map((rowWords) => {
-    const cells = rowWords.map((w) => wordCell(w, role, columns, tier, cellWidth));
+    const cells = rowWords.map((w) => wordCell(w, role, columns, cellWidth));
     while (cells.length < columns) cells.push(emptyCell(cellWidth));
-    return new TableRow({ cantSplit: true, children: cells });
+    return new TableRow({ cantSplit: true, height: rowHeight, children: cells });
   });
 
   const blocks = [
@@ -306,15 +388,17 @@ async function renderDocx({ role, assembled, meta = {} }) {
   const roleLabel = role === "teacher" ? "Teacher Copy" : "Student Copy";
   const orientation = meta.orientation === "landscape" ? "landscape" : "portrait";
   const usableWidth = usableWidthTwip(orientation);
+  const matchCode = assembled.matchCode || "";
 
   const children = [
-    ...titleBlock(title, roleLabel),
+    ...titleBlock(title, roleLabel, role, matchCode),
     metaFieldsTable(role, meta, usableWidth),
   ];
 
   if (role === "teacher") {
     children.push(...instructionsBlock());
     children.push(...resultsSummaryTable(assembled.summary, usableWidth));
+    children.push(...notesBoxBlock());
   }
 
   children.push(...wordGridBlocks(assembled.words, role, columns, usableWidth));
