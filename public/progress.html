@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Reading Progress - Ganeinu Academy</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  .auth-card {
+    max-width: 360px;
+    margin: 60px auto;
+  }
+  .auth-switch { margin-top: 14px; font-size: 12.5px; color: var(--muted); text-align: center; }
+  .auth-switch button {
+    background: none; border: none; padding: 0; color: var(--accent);
+    text-decoration: underline; cursor: pointer; font-size: inherit;
+  }
+  .signed-in-card { max-width: 480px; margin: 60px auto; text-align: center; }
+  .signed-in-card p { color: var(--muted); }
+</style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>Reading Progress</h1>
+    <p>Ganeinu Academy - track and review student reading assessments.</p>
+  </header>
+
+  <main>
+    <section id="auth-view" class="card auth-card" hidden>
+      <h2 id="auth-heading">Teacher Sign In</h2>
+      <form id="login-form">
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="login-email" required maxlength="120" autocomplete="username" />
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="login-password" required autocomplete="current-password" />
+        </label>
+        <button type="submit" class="btn btn-primary">Sign In</button>
+        <p id="login-status" class="status-message" role="status"></p>
+      </form>
+
+      <form id="signup-form" hidden>
+        <label class="field">
+          <span>Name</span>
+          <input type="text" id="signup-name" required maxlength="80" autocomplete="name" />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="signup-email" required maxlength="120" autocomplete="username" />
+        </label>
+        <label class="field">
+          <span>Password <em>(8+ characters)</em></span>
+          <input type="password" id="signup-password" required minlength="8" autocomplete="new-password" />
+        </label>
+        <button type="submit" class="btn btn-primary">Create Account</button>
+        <p id="signup-status" class="status-message" role="status"></p>
+      </form>
+
+      <p class="auth-switch">
+        <span id="to-signup-wrap">New teacher? <button type="button" id="show-signup">Create an account</button></span>
+        <span id="to-login-wrap" hidden>Already have an account? <button type="button" id="show-login">Sign in</button></span>
+      </p>
+    </section>
+
+    <section id="app-view" class="card signed-in-card" hidden>
+      <h2>Welcome, <span id="teacher-name"></span></h2>
+      <p>Progress tracking is coming soon - this is just the sign-in for now.</p>
+      <button type="button" id="logout-btn" class="btn btn-secondary">Sign Out</button>
+    </section>
+  </main>
+
+  <script src="progress.js"></script>
+</body>
+</html>
