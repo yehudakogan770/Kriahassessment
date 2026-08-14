@@ -7,7 +7,7 @@ const TEACHER_INSTRUCTIONS = [
   "Circle every letter/nekuda where a mistake was made.",
   "Mark SC for self-correction. H for hesitant.",
   "Write what the student said next to or above the circled mistake.",
-  "Mark how many out of the three words were read INCORRECTLY.",
+  "Mark how many words in each category were read INCORRECTLY.",
 ];
 
 module.exports = { TEACHER_INSTRUCTIONS };
