@@ -15,8 +15,57 @@
     background: none; border: none; padding: 0; color: var(--accent);
     text-decoration: underline; cursor: pointer; font-size: inherit;
   }
-  .signed-in-card { max-width: 480px; margin: 60px auto; text-align: center; }
-  .signed-in-card p { color: var(--muted); }
+  .field textarea {
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    resize: vertical;
+  }
+  .student-list { margin-top: 10px; border-top: 1px solid var(--border); }
+  .student-row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 9px 4px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+  }
+  .student-row:hover { background: var(--bg); }
+  .student-row.active { background: var(--accent-light); }
+  .student-row .s-name { font-weight: 600; flex: 1; }
+  .student-row .s-grade { color: var(--muted); font-size: 12.5px; }
+  .student-row .s-meta { color: var(--muted); font-size: 11.5px; }
+  .empty-list { color: var(--muted); font-size: 13px; padding: 10px 4px; }
+  .mastery-radios { display: flex; flex-direction: column; gap: 4px; font-weight: 400; font-size: 13.5px; }
+  .mastery-radios label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+  .mastery-radios input { margin: 0; }
+  .assessment-entry { border-bottom: 1px solid var(--border); padding: 10px 2px; }
+  .assessment-entry:last-child { border-bottom: none; }
+  .assessment-head { display: flex; align-items: baseline; gap: 8px; }
+  .assessment-skill { font-weight: 600; flex: 1; }
+  .assessment-date { color: var(--muted); font-size: 12px; }
+  .assessment-notes { color: #444; font-size: 13px; margin: 4px 0 0; white-space: pre-wrap; }
+  .assessment-by { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .mastery-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .mastery-badge.mastered { background: #1e7a34; color: #fff; }
+  .mastery-badge.approaching { background: #b3830f; color: #fff; }
+  .mastery-badge.progressing { background: #666; color: #fff; }
+  .top-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 </style>
 </head>
 <body>
@@ -64,11 +113,65 @@
       </p>
     </section>
 
-    <section id="app-view" class="card signed-in-card" hidden>
-      <h2>Welcome, <span id="teacher-name"></span></h2>
-      <p>Progress tracking is coming soon - this is just the sign-in for now.</p>
-      <button type="button" id="logout-btn" class="btn btn-secondary">Sign Out</button>
-    </section>
+    <div id="app-view" class="layout" hidden>
+      <section class="panel">
+        <div class="card">
+          <div class="top-bar">
+            <h2>Students</h2>
+          </div>
+          <form id="add-student-form" class="field-row">
+            <label class="field">
+              <span>Name</span>
+              <input type="text" id="new-student-name" required maxlength="80" />
+            </label>
+            <label class="field field-narrow">
+              <span>Grade <em>(optional)</em></span>
+              <input type="text" id="new-student-grade" maxlength="40" placeholder="e.g. 2A" />
+            </label>
+            <button type="submit" class="btn btn-primary">Add</button>
+          </form>
+          <p id="add-student-status" class="status-message" role="status"></p>
+          <div id="student-list" class="student-list"></div>
+        </div>
+        <p class="hint">Signed in as <strong id="teacher-name"></strong> - <button type="button" id="logout-btn" class="btn-link">Sign out</button></p>
+      </section>
+
+      <section class="panel">
+        <div class="card" id="student-detail-card" hidden>
+          <h2 id="student-detail-name"></h2>
+          <form id="log-assessment-form">
+            <div class="field-row">
+              <label class="field">
+                <span>Skill</span>
+                <input type="text" id="assess-skill" required maxlength="120" placeholder="e.g. Sheva Rules" />
+              </label>
+              <label class="field field-narrow">
+                <span>Date</span>
+                <input type="date" id="assess-date" required />
+              </label>
+            </div>
+            <label class="field">
+              <span>Mastery</span>
+              <div class="mastery-radios">
+                <label><input type="radio" name="mastery" value="mastered" /> Mastered</label>
+                <label><input type="radio" name="mastery" value="approaching" /> Approaching Mastery</label>
+                <label><input type="radio" name="mastery" value="progressing" checked /> Making Progress</label>
+              </div>
+            </label>
+            <label class="field">
+              <span>Notes <em>(optional)</em></span>
+              <textarea id="assess-notes" maxlength="2000" rows="3"></textarea>
+            </label>
+            <button type="submit" class="btn btn-primary">Log Assessment</button>
+            <p id="log-status" class="status-message" role="status"></p>
+          </form>
+
+          <h2 style="margin-top: 22px;">History</h2>
+          <div id="assessment-history"></div>
+        </div>
+        <p id="no-student-placeholder" class="hint">Select or add a student to log an assessment.</p>
+      </section>
+    </div>
   </main>
 
   <script src="progress.js"></script>
