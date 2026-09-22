@@ -142,16 +142,26 @@
           <form id="log-assessment-form">
             <div class="field-row">
               <label class="field">
-                <span>Skill</span>
-                <input type="text" id="assess-skill" required maxlength="120" placeholder="e.g. Sheva Rules" />
+                <span>Category</span>
+                <select id="assess-category" required></select>
               </label>
+              <label class="field">
+                <span>Skill</span>
+                <select id="assess-skill" required></select>
+              </label>
+            </div>
+            <div class="field-row">
               <label class="field field-narrow">
                 <span>Date</span>
                 <input type="date" id="assess-date" required />
               </label>
+              <label class="field field-narrow">
+                <span>Misread count <em>(optional)</em></span>
+                <input type="number" id="assess-misread-count" min="0" max="999" />
+              </label>
             </div>
             <label class="field">
-              <span>Mastery</span>
+              <span>Mastery <em>(based on accuracy and speed/fluency together)</em></span>
               <div class="mastery-radios">
                 <label><input type="radio" name="mastery" value="mastered" /> Mastered</label>
                 <label><input type="radio" name="mastery" value="approaching" /> Approaching Mastery</label>
@@ -159,8 +169,47 @@
               </div>
             </label>
             <label class="field">
+              <span>Fluency <em>(optional, check any that apply)</em></span>
+              <div id="fluency-checkboxes" class="mastery-radios"></div>
+            </label>
+
+            <div id="letter-confusion-fields" hidden>
+              <label class="field">
+                <span>Look-alike letters mixed up <em>(optional)</em></span>
+                <input type="text" id="assess-look-alike" maxlength="300" placeholder="e.g. ב / כ" />
+              </label>
+              <label class="field">
+                <span>Sound-alike letters mixed up <em>(optional)</em></span>
+                <input type="text" id="assess-sound-alike" maxlength="300" placeholder="e.g. כ / ק" />
+              </label>
+              <label class="field">
+                <span>Phonemic awareness mix-ups <em>(optional)</em></span>
+                <input type="text" id="assess-phonemic" maxlength="300" />
+              </label>
+            </div>
+
+            <div id="vowel-confusion-fields" hidden>
+              <label class="field">
+                <span>Vowel name confusion <em>(optional)</em></span>
+                <input type="text" id="assess-vowel-name" maxlength="300" placeholder="e.g. Kamatz / Patach" />
+              </label>
+              <label class="field">
+                <span>Vowel sound confusion <em>(optional)</em></span>
+                <input type="text" id="assess-vowel-sound" maxlength="300" />
+              </label>
+              <label class="field">
+                <span>Vowel-letter blending confusion <em>(optional)</em></span>
+                <input type="text" id="assess-vowel-blend" maxlength="300" />
+              </label>
+            </div>
+
+            <label class="field">
               <span>Notes <em>(optional)</em></span>
-              <textarea id="assess-notes" maxlength="2000" rows="3"></textarea>
+              <textarea id="assess-notes" maxlength="2000" rows="2"></textarea>
+            </label>
+            <label class="field">
+              <span>Next Step <em>(optional - how the student can practice this)</em></span>
+              <textarea id="assess-next-step" maxlength="1000" rows="2"></textarea>
             </label>
             <button type="submit" class="btn btn-primary">Log Assessment</button>
             <p id="log-status" class="status-message" role="status"></p>

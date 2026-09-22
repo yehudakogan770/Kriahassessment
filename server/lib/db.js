@@ -55,7 +55,33 @@ function getDb() {
     );
   `);
 
+  migrate(db);
+
   return db;
+}
+
+// Additive, idempotent column migrations - safe to run against a database
+// created before these columns existed (increment 2) as well as a brand
+// new one. Only ever adds columns, never drops/renames, so older rows
+// just read back with NULLs for fields they predate.
+function migrate(db) {
+  const existing = new Set(db.prepare("PRAGMA table_info(assessments)").all().map((c) => c.name));
+  const addColumn = (name, ddl) => {
+    if (!existing.has(name)) db.exec(`ALTER TABLE assessments ADD COLUMN ${ddl}`);
+  };
+
+  // Top-level skill category (see server/lib/skills.js) - `skill` already
+  // existed as free text in increment 2; it now holds one of that
+  // category's specific skills instead.
+  addColumn("category", "category TEXT");
+  // JSON array of FLUENCY_NOTE_OPTIONS ids, e.g. ["hesitancy"].
+  addColumn("fluency_notes", "fluency_notes TEXT");
+  // Free text: how the teacher suggests the student practice next.
+  addColumn("next_step", "next_step TEXT");
+  // JSON object: { misreadCount, lookAlikeLetters, soundAlikeLetters,
+  // phonemicMixups, vowelNameConfusion, vowelSoundConfusion,
+  // vowelBlendingConfusion } - see server/routes/progress.js.
+  addColumn("mistake_detail", "mistake_detail TEXT");
 }
 
 module.exports = { getDb };

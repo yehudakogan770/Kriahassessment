@@ -24,9 +24,21 @@
     studentDetailName: document.getElementById("student-detail-name"),
     noStudentPlaceholder: document.getElementById("no-student-placeholder"),
     logAssessmentForm: document.getElementById("log-assessment-form"),
+    assessCategory: document.getElementById("assess-category"),
     assessSkill: document.getElementById("assess-skill"),
     assessDate: document.getElementById("assess-date"),
+    assessMisreadCount: document.getElementById("assess-misread-count"),
+    fluencyCheckboxes: document.getElementById("fluency-checkboxes"),
+    letterConfusionFields: document.getElementById("letter-confusion-fields"),
+    vowelConfusionFields: document.getElementById("vowel-confusion-fields"),
+    assessLookAlike: document.getElementById("assess-look-alike"),
+    assessSoundAlike: document.getElementById("assess-sound-alike"),
+    assessPhonemic: document.getElementById("assess-phonemic"),
+    assessVowelName: document.getElementById("assess-vowel-name"),
+    assessVowelSound: document.getElementById("assess-vowel-sound"),
+    assessVowelBlend: document.getElementById("assess-vowel-blend"),
     assessNotes: document.getElementById("assess-notes"),
+    assessNextStep: document.getElementById("assess-next-step"),
     logStatus: document.getElementById("log-status"),
     assessmentHistory: document.getElementById("assessment-history"),
   };
@@ -37,7 +49,23 @@
     progressing: "Making Progress",
   };
 
-  const state = { selectedStudentId: null };
+  const MISTAKE_DETAIL_LABELS = {
+    misreadCount: "Misread",
+    lookAlikeLetters: "Look-alike letters",
+    soundAlikeLetters: "Sound-alike letters",
+    phonemicMixups: "Phonemic mix-ups",
+    vowelNameConfusion: "Vowel name confusion",
+    vowelSoundConfusion: "Vowel sound confusion",
+    vowelBlendingConfusion: "Vowel-letter blending confusion",
+  };
+
+  const state = {
+    selectedStudentId: null,
+    taxonomy: [],
+    letterConfusionCategories: [],
+    vowelConfusionCategories: [],
+    fluencyNoteOptions: [],
+  };
 
   function setStatus(node, message, kind) {
     node.textContent = message || "";
@@ -63,6 +91,7 @@
     el.authView.hidden = true;
     el.appView.hidden = false;
     el.teacherName.textContent = teacher.name;
+    loadSkillTaxonomy();
     loadStudents();
   }
 
@@ -131,6 +160,48 @@
     showAuth();
   });
 
+  // ---- Skill taxonomy ----
+
+  async function loadSkillTaxonomy() {
+    const res = await fetch("/api/progress/skills");
+    if (!res.ok) return;
+    const body = await res.json();
+    state.taxonomy = body.taxonomy;
+    state.letterConfusionCategories = body.letterConfusionCategories;
+    state.vowelConfusionCategories = body.vowelConfusionCategories;
+    state.fluencyNoteOptions = body.fluencyNoteOptions;
+
+    el.assessCategory.innerHTML = state.taxonomy
+      .map((c) => `<option value="${escapeHtml(c.category)}">${escapeHtml(c.category)}</option>`)
+      .join("");
+    el.fluencyCheckboxes.innerHTML = state.fluencyNoteOptions
+      .map(
+        (o) => `<label><input type="checkbox" name="fluency" value="${escapeHtml(o.id)}" /> ${escapeHtml(o.label)}</label>`
+      )
+      .join("");
+
+    populateSkillsForCategory(el.assessCategory.value);
+    updateConfusionFieldsVisibility(el.assessCategory.value);
+  }
+
+  function populateSkillsForCategory(category) {
+    const cat = state.taxonomy.find((c) => c.category === category);
+    const skills = cat ? cat.skills : [];
+    el.assessSkill.innerHTML = skills
+      .map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`)
+      .join("");
+  }
+
+  function updateConfusionFieldsVisibility(category) {
+    el.letterConfusionFields.hidden = !state.letterConfusionCategories.includes(category);
+    el.vowelConfusionFields.hidden = !state.vowelConfusionCategories.includes(category);
+  }
+
+  el.assessCategory.addEventListener("change", () => {
+    populateSkillsForCategory(el.assessCategory.value);
+    updateConfusionFieldsVisibility(el.assessCategory.value);
+  });
+
   // ---- Students ----
 
   async function loadStudents() {
@@ -186,6 +257,24 @@
     }
   });
 
+  function resetAssessmentForm() {
+    el.assessCategory.selectedIndex = 0;
+    populateSkillsForCategory(el.assessCategory.value);
+    updateConfusionFieldsVisibility(el.assessCategory.value);
+    el.assessDate.value = todayIso();
+    el.assessMisreadCount.value = "";
+    el.fluencyCheckboxes.querySelectorAll("input").forEach((cb) => (cb.checked = false));
+    el.assessLookAlike.value = "";
+    el.assessSoundAlike.value = "";
+    el.assessPhonemic.value = "";
+    el.assessVowelName.value = "";
+    el.assessVowelSound.value = "";
+    el.assessVowelBlend.value = "";
+    el.assessNotes.value = "";
+    el.assessNextStep.value = "";
+    el.logAssessmentForm.querySelector('input[name="mastery"][value="progressing"]').checked = true;
+  }
+
   async function selectStudent(id) {
     state.selectedStudentId = id;
     el.studentList.querySelectorAll(".student-row").forEach((row) => {
@@ -199,8 +288,16 @@
     el.noStudentPlaceholder.hidden = true;
     el.studentDetailCard.hidden = false;
     el.studentDetailName.textContent = student.grade ? `${student.name} (${student.grade})` : student.name;
-    el.assessDate.value = todayIso();
+    resetAssessmentForm();
     renderAssessmentHistory(assessments);
+  }
+
+  function renderMistakeDetail(detail) {
+    if (!detail) return "";
+    const parts = Object.keys(MISTAKE_DETAIL_LABELS)
+      .filter((key) => detail[key] !== undefined && detail[key] !== null && detail[key] !== "")
+      .map((key) => `<strong>${escapeHtml(MISTAKE_DETAIL_LABELS[key])}:</strong> ${escapeHtml(detail[key])}`);
+    return parts.length ? `<p class="assessment-notes">${parts.join(" &middot; ")}</p>` : "";
   }
 
   function renderAssessmentHistory(assessments) {
@@ -212,13 +309,19 @@
     for (const a of assessments) {
       const entry = document.createElement("div");
       entry.className = "assessment-entry";
+      const fluencyLabels = (a.fluencyNotes || [])
+        .map((id) => state.fluencyNoteOptions.find((o) => o.id === id)?.label || id)
+        .join(", ");
       entry.innerHTML = `
         <div class="assessment-head">
-          <span class="assessment-skill">${escapeHtml(a.skill)}</span>
+          <span class="assessment-skill">${escapeHtml(a.category)} - ${escapeHtml(a.skill)}</span>
           <span class="mastery-badge ${a.mastery}">${MASTERY_LABELS[a.mastery] || a.mastery}</span>
           <span class="assessment-date">${escapeHtml(a.assessedOn)}</span>
         </div>
+        ${fluencyLabels ? `<p class="assessment-notes"><strong>Fluency:</strong> ${escapeHtml(fluencyLabels)}</p>` : ""}
+        ${renderMistakeDetail(a.mistakeDetail)}
         ${a.notes ? `<p class="assessment-notes">${escapeHtml(a.notes)}</p>` : ""}
+        ${a.nextStep ? `<p class="assessment-notes"><strong>Next Step:</strong> ${escapeHtml(a.nextStep)}</p>` : ""}
         <p class="assessment-by">Logged by ${escapeHtml(a.teacherName)}</p>
       `;
       el.assessmentHistory.appendChild(entry);
@@ -230,21 +333,31 @@
     setStatus(el.logStatus, "");
     if (!state.selectedStudentId) return;
 
-    const skill = el.assessSkill.value.trim();
+    const category = el.assessCategory.value;
+    const skill = el.assessSkill.value;
     const mastery = el.logAssessmentForm.querySelector('input[name="mastery"]:checked')?.value;
     const assessedOn = el.assessDate.value;
     const notes = el.assessNotes.value.trim();
+    const nextStep = el.assessNextStep.value.trim();
+    const fluencyNotes = Array.from(el.fluencyCheckboxes.querySelectorAll("input:checked")).map((cb) => cb.value);
+    const mistakeDetail = {
+      misreadCount: el.assessMisreadCount.value === "" ? undefined : Number(el.assessMisreadCount.value),
+      lookAlikeLetters: el.assessLookAlike.value.trim(),
+      soundAlikeLetters: el.assessSoundAlike.value.trim(),
+      phonemicMixups: el.assessPhonemic.value.trim(),
+      vowelNameConfusion: el.assessVowelName.value.trim(),
+      vowelSoundConfusion: el.assessVowelSound.value.trim(),
+      vowelBlendingConfusion: el.assessVowelBlend.value.trim(),
+    };
 
     try {
       const res = await fetch(`/api/progress/students/${state.selectedStudentId}/assessments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skill, mastery, assessedOn, notes }),
+        body: JSON.stringify({ category, skill, mastery, assessedOn, notes, nextStep, fluencyNotes, mistakeDetail }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Could not log assessment.");
-      el.assessSkill.value = "";
-      el.assessNotes.value = "";
       setStatus(el.logStatus, "Logged.", "success");
       await loadStudents();
       await selectStudent(state.selectedStudentId);
