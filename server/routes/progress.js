@@ -115,6 +115,70 @@ router.get("/progress/skills", (req, res) => {
   });
 });
 
+router.get("/progress/classes", (req, res) => {
+  const grades = getDb()
+    .prepare("SELECT DISTINCT grade FROM students WHERE grade IS NOT NULL AND grade != '' ORDER BY grade COLLATE NOCASE")
+    .all()
+    .map((r) => r.grade);
+  res.json({ grades });
+});
+
+/** Whole-school or single-class rollup for the "General" and "Detailed"
+ * views (viewable by accuracy or by fluency, per the spec) - one payload
+ * covers both view modes so the client can switch without another
+ * request. `latestBySkill` is each student's most recent assessment per
+ * skill (what "General" mode shows); `assessments` is their full history
+ * (what "Detailed" mode shows). */
+router.get("/progress/report", (req, res) => {
+  const grade = clampText(req.query?.grade, 40);
+  const db = getDb();
+
+  const students = grade
+    ? db.prepare("SELECT * FROM students WHERE grade = ? ORDER BY name COLLATE NOCASE").all(grade)
+    : db.prepare("SELECT * FROM students ORDER BY name COLLATE NOCASE").all();
+
+  const allRowsStmt = db.prepare(
+    `SELECT assessments.id, assessments.category, assessments.skill, assessments.mastery,
+            assessments.notes, assessments.next_step AS nextStep,
+            assessments.fluency_notes AS fluencyNotes, assessments.mistake_detail AS mistakeDetail,
+            assessments.duration_seconds AS durationSeconds,
+            assessments.assessed_on AS assessedOn, assessments.created_at AS createdAt,
+            teachers.name AS teacherName
+     FROM assessments
+     JOIN teachers ON teachers.id = assessments.teacher_id
+     WHERE assessments.student_id = ?
+     ORDER BY assessments.assessed_on DESC, assessments.id DESC`
+  );
+  const latestStmt = db.prepare(
+    `SELECT assessments.id, assessments.category, assessments.skill, assessments.mastery,
+            assessments.duration_seconds AS durationSeconds, assessments.assessed_on AS assessedOn
+     FROM assessments
+     WHERE assessments.id = (
+       SELECT id FROM assessments a2
+       WHERE a2.student_id = assessments.student_id AND a2.skill = assessments.skill
+       ORDER BY a2.assessed_on DESC, a2.id DESC LIMIT 1
+     ) AND assessments.student_id = ?
+     ORDER BY assessments.category, assessments.skill`
+  );
+
+  const report = students.map((student) => {
+    const assessments = allRowsStmt.all(student.id).map((row) => {
+      const parsed = parseAssessmentRow(row);
+      if (parsed.durationSeconds != null) {
+        Object.assign(parsed, getFluencyComparison(parsed.skill, student.grade));
+      }
+      return parsed;
+    });
+    const latestBySkill = latestStmt.all(student.id).map((row) => ({
+      ...row,
+      ...(row.durationSeconds != null ? getFluencyComparison(row.skill, student.grade) : {}),
+    }));
+    return { student, latestBySkill, assessments };
+  });
+
+  res.json({ grade: grade || null, report });
+});
+
 router.get("/progress/students", (req, res) => {
   const students = getDb()
     .prepare(
