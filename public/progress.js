@@ -28,6 +28,8 @@
     assessSkill: document.getElementById("assess-skill"),
     assessDate: document.getElementById("assess-date"),
     assessMisreadCount: document.getElementById("assess-misread-count"),
+    assessDurationMin: document.getElementById("assess-duration-min"),
+    assessDurationSec: document.getElementById("assess-duration-sec"),
     fluencyCheckboxes: document.getElementById("fluency-checkboxes"),
     letterConfusionFields: document.getElementById("letter-confusion-fields"),
     vowelConfusionFields: document.getElementById("vowel-confusion-fields"),
@@ -263,6 +265,8 @@
     updateConfusionFieldsVisibility(el.assessCategory.value);
     el.assessDate.value = todayIso();
     el.assessMisreadCount.value = "";
+    el.assessDurationMin.value = "";
+    el.assessDurationSec.value = "";
     el.fluencyCheckboxes.querySelectorAll("input").forEach((cb) => (cb.checked = false));
     el.assessLookAlike.value = "";
     el.assessSoundAlike.value = "";
@@ -300,6 +304,24 @@
     return parts.length ? `<p class="assessment-notes">${parts.join(" &middot; ")}</p>` : "";
   }
 
+  function formatDuration(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  }
+
+  function renderFluencyTiming(a) {
+    if (a.durationSeconds == null) return "";
+    const parts = [`Took ${formatDuration(a.durationSeconds)}`];
+    if (a.classAvgSeconds != null) {
+      parts.push(`Class avg ${formatDuration(a.classAvgSeconds)} (n=${a.classCount})`);
+    }
+    if (a.schoolAvgSeconds != null) {
+      parts.push(`School avg ${formatDuration(a.schoolAvgSeconds)} (n=${a.schoolCount})`);
+    }
+    return `<p class="assessment-notes">${escapeHtml(parts.join(" · "))}</p>`;
+  }
+
   function renderAssessmentHistory(assessments) {
     el.assessmentHistory.innerHTML = "";
     if (assessments.length === 0) {
@@ -318,6 +340,7 @@
           <span class="mastery-badge ${a.mastery}">${MASTERY_LABELS[a.mastery] || a.mastery}</span>
           <span class="assessment-date">${escapeHtml(a.assessedOn)}</span>
         </div>
+        ${renderFluencyTiming(a)}
         ${fluencyLabels ? `<p class="assessment-notes"><strong>Fluency:</strong> ${escapeHtml(fluencyLabels)}</p>` : ""}
         ${renderMistakeDetail(a.mistakeDetail)}
         ${a.notes ? `<p class="assessment-notes">${escapeHtml(a.notes)}</p>` : ""}
@@ -349,12 +372,18 @@
       vowelSoundConfusion: el.assessVowelSound.value.trim(),
       vowelBlendingConfusion: el.assessVowelBlend.value.trim(),
     };
+    const minutes = el.assessDurationMin.value === "" ? 0 : Number(el.assessDurationMin.value);
+    const seconds = el.assessDurationSec.value === "" ? 0 : Number(el.assessDurationSec.value);
+    const durationSeconds =
+      el.assessDurationMin.value === "" && el.assessDurationSec.value === "" ? null : minutes * 60 + seconds;
 
     try {
       const res = await fetch(`/api/progress/students/${state.selectedStudentId}/assessments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, skill, mastery, assessedOn, notes, nextStep, fluencyNotes, mistakeDetail }),
+        body: JSON.stringify({
+          category, skill, mastery, assessedOn, notes, nextStep, fluencyNotes, mistakeDetail, durationSeconds,
+        }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error || "Could not log assessment.");
