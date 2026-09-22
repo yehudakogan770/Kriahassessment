@@ -57,11 +57,52 @@ function sanitizeFluencyNotes(raw) {
   return [...new Set(raw.filter((id) => FLUENCY_NOTE_IDS.includes(id)))];
 }
 
+function sanitizeDurationSeconds(raw) {
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 && n <= 3600 ? Math.round(n) : null;
+}
+
 function parseAssessmentRow(row) {
   return {
     ...row,
     fluencyNotes: row.fluencyNotes ? JSON.parse(row.fluencyNotes) : [],
     mistakeDetail: row.mistakeDetail ? JSON.parse(row.mistakeDetail) : null,
+  };
+}
+
+/** Average assessment duration for a skill, school-wide and (if the
+ * student has a grade) within their own grade - lets a teacher see how a
+ * student's fluency time compares, per the original spec. Averages
+ * include the student's own recorded times for that skill, matching how
+ * "class average" is normally understood. Returns nulls when there's no
+ * timed data to compare against (e.g. nobody else has a grade set, or no
+ * one has recorded a duration for this skill yet). */
+function getFluencyComparison(skill, grade) {
+  const db = getDb();
+  const school = db
+    .prepare(
+      `SELECT AVG(duration_seconds) AS avgSeconds, COUNT(*) AS n
+       FROM assessments WHERE skill = ? AND duration_seconds IS NOT NULL`
+    )
+    .get(skill);
+
+  let classRow = { avgSeconds: null, n: 0 };
+  if (grade) {
+    classRow = db
+      .prepare(
+        `SELECT AVG(assessments.duration_seconds) AS avgSeconds, COUNT(*) AS n
+         FROM assessments
+         JOIN students ON students.id = assessments.student_id
+         WHERE assessments.skill = ? AND students.grade = ? AND assessments.duration_seconds IS NOT NULL`
+      )
+      .get(skill, grade);
+  }
+
+  return {
+    schoolAvgSeconds: school.n > 0 ? Math.round(school.avgSeconds) : null,
+    schoolCount: school.n,
+    classAvgSeconds: classRow.n > 0 ? Math.round(classRow.avgSeconds) : null,
+    classCount: classRow.n,
   };
 }
 
@@ -119,6 +160,7 @@ router.get("/progress/students/:id", (req, res) => {
       `SELECT assessments.id, assessments.category, assessments.skill, assessments.mastery,
               assessments.notes, assessments.next_step AS nextStep,
               assessments.fluency_notes AS fluencyNotes, assessments.mistake_detail AS mistakeDetail,
+              assessments.duration_seconds AS durationSeconds,
               assessments.assessed_on AS assessedOn, assessments.created_at AS createdAt,
               teachers.name AS teacherName
        FROM assessments
@@ -128,7 +170,15 @@ router.get("/progress/students/:id", (req, res) => {
     )
     .all(student.id);
 
-  res.json({ student, assessments: rows.map(parseAssessmentRow) });
+  const assessments = rows.map((row) => {
+    const parsed = parseAssessmentRow(row);
+    if (parsed.durationSeconds != null) {
+      Object.assign(parsed, getFluencyComparison(parsed.skill, student.grade));
+    }
+    return parsed;
+  });
+
+  res.json({ student, assessments });
 });
 
 router.post("/progress/students/:id/assessments", (req, res) => {
@@ -143,6 +193,7 @@ router.post("/progress/students/:id/assessments", (req, res) => {
   const assessedOn = clampText(req.body?.assessedOn, 10) || todayIso();
   const fluencyNotes = sanitizeFluencyNotes(req.body?.fluencyNotes);
   const mistakeDetail = sanitizeMistakeDetail(req.body?.mistakeDetail);
+  const durationSeconds = sanitizeDurationSeconds(req.body?.durationSeconds);
 
   if (!isValidCategory(category)) {
     return res.status(400).json({ error: "Unknown skill category." });
@@ -160,8 +211,8 @@ router.post("/progress/students/:id/assessments", (req, res) => {
   const info = getDb()
     .prepare(
       `INSERT INTO assessments
-         (student_id, teacher_id, category, skill, mastery, notes, next_step, fluency_notes, mistake_detail, assessed_on)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         (student_id, teacher_id, category, skill, mastery, notes, next_step, fluency_notes, mistake_detail, duration_seconds, assessed_on)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       student.id,
@@ -173,6 +224,7 @@ router.post("/progress/students/:id/assessments", (req, res) => {
       nextStep || null,
       JSON.stringify(fluencyNotes),
       mistakeDetail ? JSON.stringify(mistakeDetail) : null,
+      durationSeconds,
       assessedOn
     );
 
@@ -186,6 +238,8 @@ router.post("/progress/students/:id/assessments", (req, res) => {
       nextStep: nextStep || null,
       fluencyNotes,
       mistakeDetail,
+      durationSeconds,
+      ...(durationSeconds != null ? getFluencyComparison(skill, student.grade) : {}),
       assessedOn,
       teacherName: req.teacher.name,
     },

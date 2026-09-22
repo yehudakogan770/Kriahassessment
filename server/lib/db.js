@@ -82,6 +82,10 @@ function migrate(db) {
   // phonemicMixups, vowelNameConfusion, vowelSoundConfusion,
   // vowelBlendingConfusion } - see server/routes/progress.js.
   addColumn("mistake_detail", "mistake_detail TEXT");
+  // How long the assessment took, in whole seconds - lets a student's
+  // fluency time be compared against their class (same grade) and the
+  // whole school, for the same skill.
+  addColumn("duration_seconds", "duration_seconds INTEGER");
 }
 
 module.exports = { getDb };
