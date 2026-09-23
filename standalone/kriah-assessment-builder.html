@@ -34126,8 +34126,9 @@ function spacedShuffle(items, minGap, rng = Math.random) {
  * the same word on both copies - shuffling once here, rather than
  * separately per role, is what keeps that true.
  *
- * `filters` optionally narrows down a category's words two ways, which
- * can be combined - e.g. { "c01-letters-3x": { include: ["א", "ב"], limit: 10 } }:
+ * `filters` optionally narrows down and/or expands a category's words,
+ * which can be combined - e.g.
+ * { "c01-letters-3x": { include: ["א", "ב"], limit: 10, repeat: 5 } }:
  *   - `include`: specific words/letters to use, and nothing else (every
  *     occurrence of each - e.g. all 3 repetitions of a letter in
  *     "Letters (3x)") - for picking exactly which ones to test. Leaving
@@ -34136,6 +34137,10 @@ function spacedShuffle(items, minGap, rng = Math.random) {
  *     order, after the include filter) when a teacher just wants fewer
  *     words and doesn't care which ones - the original, simpler way to
  *     narrow a category down, kept alongside the newer per-word picker.
+ *   - `repeat`: repeats each distinct word/letter exactly this many times,
+ *     overriding whatever repeat pattern the source data happens to have
+ *     baked in (e.g. "Letters (3x)" is really a 1-4x mix per letter, not a
+ *     clean 3x) - for when a teacher wants a specific, even repeat count.
  * Categories not present in `filters`, or with an empty `include`, use
  * every word as before.
  *
@@ -34167,10 +34172,20 @@ function assemble(categoryIds, filters = {}, matchCode) {
     const f = filters[cat.id] || {};
     const include = Array.isArray(f.include) ? f.include : [];
     const kept = include.length ? cat.words.filter((w) => include.includes(w)) : cat.words;
-    let wordList = kept.length > 0 ? kept : cat.words;
-    if (Number.isInteger(f.limit) && f.limit > 0 && f.limit < wordList.length) {
-      wordList = wordList.slice(0, f.limit);
+    let base = kept.length > 0 ? kept : cat.words;
+
+    // A chosen repeat count replaces whatever repeat pattern happens to be
+    // baked into the source word-bank data (e.g. "Letters (3x)" is really
+    // a 1-4x mix per letter, not a clean 3x) - starting from the distinct
+    // words only, then repeating each one exactly `repeat` times.
+    const repeat = Number.isInteger(f.repeat) && f.repeat > 0 ? f.repeat : null;
+    if (repeat) base = [...new Set(base)];
+
+    if (Number.isInteger(f.limit) && f.limit > 0 && f.limit < base.length) {
+      base = base.slice(0, f.limit);
     }
+
+    const wordList = repeat ? base.flatMap((w) => Array(repeat).fill(w)) : base;
     return { categoryNumber, categoryId: cat.id, categoryName: cat.name, wordList };
   });
 
@@ -34292,12 +34307,6 @@ function renderNotesBox() {
   </section>`;
 }
 
-function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
-
 function renderWordCell(word, role, tier) {
   const catBadge =
     role === "teacher"
@@ -34322,21 +34331,12 @@ function renderWordGrid(words, role, columns) {
   // still shows which category each word belongs to via the small corner
   // badge renderWordCell() adds per word (see role in that function), and
   // the Results Summary table above still lists every category by name.
-  //
-  // Numbered by line (not by word) - each row of the grid gets one number,
-  // in a narrow column of its own so it lines up with every row.
-  const lines = chunk(words, columns)
-    .map(
-      (lineWords, i) => `
-      <div class="grid-line" style="grid-template-columns: 22px repeat(${columns}, 1fr);">
-        <span class="line-num">${i + 1}</span>
-        ${lineWords.map((w) => renderWordCell(w, role, tier)).join("\n")}
-      </div>`
-    )
-    .join("\n");
+  const cells = words.map((w) => renderWordCell(w, role, tier)).join("\n");
   return `
     <section class="word-grid">
-      ${lines}
+      <div class="grid" style="grid-template-columns: repeat(${columns}, 1fr);">
+        ${cells}
+      </div>
     </section>`;
 }
 
@@ -34499,18 +34499,10 @@ function css() {
 
     .word-grid { }
 
-    .grid-line {
+    .grid {
       display: grid;
       gap: 3px;
-      margin-bottom: 3px;
-    }
-    .line-num {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 7.5pt;
-      color: #999;
-      font-family: 'Segoe UI', Arial, sans-serif;
+      margin-bottom: 2px;
     }
     .cell {
       container-type: inline-size;
@@ -34915,20 +34907,6 @@ function wordCell(word, role, columns, cellWidth, tier) {
   });
 }
 
-function lineNumberCell(number, width) {
-  return new TableCell({
-    width: { size: width, type: WidthType.DXA },
-    borders: NO_TABLE_BORDERS,
-    verticalAlign: VerticalAlign.CENTER,
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text: String(number), size: 15, color: GRAY, font: UI_FONT })],
-      }),
-    ],
-  });
-}
-
 function emptyCell(cellWidth) {
   return new TableCell({
     width: { size: cellWidth, type: WidthType.DXA },
@@ -34937,8 +34915,11 @@ function emptyCell(cellWidth) {
   });
 }
 
-// Line-number column width - narrow, just enough for a 1-2 digit number.
-const LINE_NUM_WIDTH_DXA = 380;
+function chunk(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
 
 function wordGridBlocks(words, role, columns, usableWidth) {
   // One tier for the whole grid (not per-word) so every word - a lone
@@ -34952,31 +34933,24 @@ function wordGridBlocks(words, role, columns, usableWidth) {
   // shows which category each word belongs to via the small superscript
   // number wordCell() adds per word (see role in that function), and the
   // Results Summary table above still lists every category by name.
-  //
-  // Numbered by line (not by word) - a narrow first column holds one
-  // number per row instead of a number in every cell.
-  const cellWidth = Math.floor((usableWidth - LINE_NUM_WIDTH_DXA) / columns);
+  const cellWidth = Math.floor(usableWidth / columns);
   // Fixed minimum row height so every card is the same size regardless of
   // which word (and therefore which tier) lands in it - generous enough to
   // fit the largest tier's text at the smallest allowed column count (2).
   // The Student copy's text runs bigger (see STUDENT_SIZE_SCALE), so its
   // rows need proportionally more room.
   const rowHeight = { value: role === "student" ? 1250 : 1100, rule: HeightRule.ATLEAST };
-  const rows = chunk(words, columns).map((rowWords, i) => {
+  const rows = chunk(words, columns).map((rowWords) => {
     const cells = rowWords.map((w) => wordCell(w, role, columns, cellWidth, tier));
     while (cells.length < columns) cells.push(emptyCell(cellWidth));
-    return new TableRow({
-      cantSplit: true,
-      height: rowHeight,
-      children: [lineNumberCell(i + 1, LINE_NUM_WIDTH_DXA), ...cells],
-    });
+    return new TableRow({ cantSplit: true, height: rowHeight, children: cells });
   });
 
   const blocks = [
     new Table({
       width: { size: usableWidth, type: WidthType.DXA },
       visuallyRightToLeft: true,
-      columnWidths: [LINE_NUM_WIDTH_DXA, ...Array(columns).fill(cellWidth)],
+      columnWidths: Array(columns).fill(cellWidth),
       rows,
     }),
   ];
@@ -35383,6 +35357,39 @@ function updateFavicon(dataUrl) {
       limitRow.append(limitLabel, limitInput, limitSuffix);
       item.appendChild(limitRow);
 
+      // Repeats each distinct word/letter exactly N times, overriding
+      // whatever repeat pattern the word bank happens to have baked in
+      // (e.g. "Letters (3x)" is really a 1-4x mix per letter, and Nekudot
+      // is a fixed 3x) - for when a teacher wants a specific, even count
+      // instead - e.g. testing each letter just once, or five times.
+      const repeatRow = document.createElement("div");
+      repeatRow.className = "cat-limit-row";
+      repeatRow.hidden = true;
+
+      const repeatLabel = document.createElement("span");
+      repeatLabel.textContent = "Repeat each";
+
+      const repeatInput = document.createElement("input");
+      repeatInput.type = "number";
+      repeatInput.className = "cat-limit cat-repeat";
+      repeatInput.min = "1";
+      repeatInput.max = "50";
+      repeatInput.placeholder = "as-is";
+      repeatInput.addEventListener("change", () => {
+        if (repeatInput.value === "") { updatePreview(); return; }
+        let n = Math.round(Number(repeatInput.value));
+        if (!Number.isFinite(n) || n < 1) n = 1;
+        if (n > 50) n = 50;
+        repeatInput.value = String(n);
+        updatePreview();
+      });
+
+      const repeatSuffix = document.createElement("span");
+      repeatSuffix.textContent = "time(s)";
+
+      repeatRow.append(repeatLabel, repeatInput, repeatSuffix);
+      item.appendChild(repeatRow);
+
       // The newer approach: pick exactly which words/letters to
       // include - e.g. "Letters (3x)" repeats every letter 3 times,
       // and only some of those letters may need testing. Chips start
@@ -35414,6 +35421,7 @@ function updateFavicon(dataUrl) {
       checkbox.addEventListener("change", () => {
         limitRow.hidden = !checkbox.checked;
         pickerRow.hidden = !checkbox.checked;
+        repeatRow.hidden = !checkbox.checked;
       });
     }
 
@@ -35481,10 +35489,12 @@ function updateFavicon(dataUrl) {
       const checkbox = item.querySelector("input[type=checkbox]");
       if (!checkbox.checked) continue;
       const include = Array.from(item.querySelectorAll(".word-chip.active")).map((chip) => chip.dataset.word);
-      const limitInput = item.querySelector(".cat-limit");
+      const limitInput = item.querySelector(".cat-limit:not(.cat-repeat)");
+      const repeatInput = item.querySelector(".cat-repeat");
       const limit = limitInput && limitInput.value !== "" ? Math.round(Number(limitInput.value)) : undefined;
-      if (include.length || (Number.isInteger(limit) && limit > 0)) {
-        filters[checkbox.value] = { include, limit };
+      const repeat = repeatInput && repeatInput.value !== "" ? Math.round(Number(repeatInput.value)) : undefined;
+      if (include.length || (Number.isInteger(limit) && limit > 0) || (Number.isInteger(repeat) && repeat > 0)) {
+        filters[checkbox.value] = { include, limit, repeat };
       }
     }
     return filters;

@@ -326,6 +326,39 @@ function updateFavicon(dataUrl) {
       limitRow.append(limitLabel, limitInput, limitSuffix);
       item.appendChild(limitRow);
 
+      // Repeats each distinct word/letter exactly N times, overriding
+      // whatever repeat pattern the word bank happens to have baked in
+      // (e.g. "Letters (3x)" is really a 1-4x mix per letter, and Nekudot
+      // is a fixed 3x) - for when a teacher wants a specific, even count
+      // instead - e.g. testing each letter just once, or five times.
+      const repeatRow = document.createElement("div");
+      repeatRow.className = "cat-limit-row";
+      repeatRow.hidden = true;
+
+      const repeatLabel = document.createElement("span");
+      repeatLabel.textContent = "Repeat each";
+
+      const repeatInput = document.createElement("input");
+      repeatInput.type = "number";
+      repeatInput.className = "cat-limit cat-repeat";
+      repeatInput.min = "1";
+      repeatInput.max = "50";
+      repeatInput.placeholder = "as-is";
+      repeatInput.addEventListener("change", () => {
+        if (repeatInput.value === "") { updatePreview(); return; }
+        let n = Math.round(Number(repeatInput.value));
+        if (!Number.isFinite(n) || n < 1) n = 1;
+        if (n > 50) n = 50;
+        repeatInput.value = String(n);
+        updatePreview();
+      });
+
+      const repeatSuffix = document.createElement("span");
+      repeatSuffix.textContent = "time(s)";
+
+      repeatRow.append(repeatLabel, repeatInput, repeatSuffix);
+      item.appendChild(repeatRow);
+
       // The newer approach: pick exactly which words/letters to
       // include - e.g. "Letters (3x)" repeats every letter 3 times,
       // and only some of those letters may need testing. Chips start
@@ -357,6 +390,7 @@ function updateFavicon(dataUrl) {
       checkbox.addEventListener("change", () => {
         limitRow.hidden = !checkbox.checked;
         pickerRow.hidden = !checkbox.checked;
+        repeatRow.hidden = !checkbox.checked;
       });
     }
 
@@ -424,10 +458,12 @@ function updateFavicon(dataUrl) {
       const checkbox = item.querySelector("input[type=checkbox]");
       if (!checkbox.checked) continue;
       const include = Array.from(item.querySelectorAll(".word-chip.active")).map((chip) => chip.dataset.word);
-      const limitInput = item.querySelector(".cat-limit");
+      const limitInput = item.querySelector(".cat-limit:not(.cat-repeat)");
+      const repeatInput = item.querySelector(".cat-repeat");
       const limit = limitInput && limitInput.value !== "" ? Math.round(Number(limitInput.value)) : undefined;
-      if (include.length || (Number.isInteger(limit) && limit > 0)) {
-        filters[checkbox.value] = { include, limit };
+      const repeat = repeatInput && repeatInput.value !== "" ? Math.round(Number(repeatInput.value)) : undefined;
+      if (include.length || (Number.isInteger(limit) && limit > 0) || (Number.isInteger(repeat) && repeat > 0)) {
+        filters[checkbox.value] = { include, limit, repeat };
       }
     }
     return filters;

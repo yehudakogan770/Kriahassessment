@@ -75,8 +75,8 @@
     return code;
   }
   let matchCodeCache = null; // { signature, code }
-  function getMatchCode(categoryIds) {
-    const signature = JSON.stringify(categoryIds);
+  function getMatchCode(categoryIds, filters) {
+    const signature = JSON.stringify({ categoryIds, filters });
     if (!matchCodeCache || matchCodeCache.signature !== signature) {
       matchCodeCache = { signature, code: generateMatchCode() };
     }
@@ -120,7 +120,21 @@
     badge.className = "cat-badge";
     badge.hidden = true;
 
-    row.append(checkbox, name, count, badge);
+    // Repeats each distinct word/letter exactly N times, overriding
+    // whatever repeat pattern the word bank happens to have baked in
+    // (e.g. "Letters (3x)" is really a 1-4x mix per letter, and Nekudot is
+    // a fixed 3x) - for testing each one a specific, even number of times
+    // instead. Only meaningful once the category is checked.
+    const repeat = document.createElement("input");
+    repeat.type = "number";
+    repeat.className = "cat-repeat";
+    repeat.min = "1";
+    repeat.max = "50";
+    repeat.placeholder = "as-is";
+    repeat.title = "Repeat each word/letter this many times (optional)";
+    repeat.hidden = true;
+
+    row.append(checkbox, name, count, repeat, badge);
     return row;
   }
 
@@ -185,15 +199,36 @@
     for (const row of el.categoryList.querySelectorAll(".category-row")) {
       const checkbox = row.querySelector("input[type=checkbox]");
       const badge = row.querySelector(".cat-badge");
+      const repeat = row.querySelector(".cat-repeat");
       if (checkbox.checked) {
         n += 1;
         badge.textContent = String(n);
         badge.hidden = false;
+        repeat.hidden = false;
       } else {
         badge.hidden = true;
+        repeat.hidden = true;
       }
     }
     return n;
+  }
+
+  /** Reads each checked category's "repeat" input into a
+   * { categoryId: { repeat: N } } map for assemble(). A category left at
+   * its default ("as-is") is omitted, which assemble() treats as "use the
+   * word bank's own repeat pattern" - same result either way. */
+  function getCategoryFilters() {
+    const filters = {};
+    for (const row of el.categoryList.querySelectorAll(".category-row")) {
+      const checkbox = row.querySelector("input[type=checkbox]");
+      if (!checkbox.checked) continue;
+      const repeatInput = row.querySelector(".cat-repeat");
+      const repeat = repeatInput.value !== "" ? Math.round(Number(repeatInput.value)) : undefined;
+      if (Number.isInteger(repeat) && repeat > 0) {
+        filters[checkbox.value] = { repeat };
+      }
+    }
+    return filters;
   }
 
   function getFormat() {
@@ -244,6 +279,7 @@
     }
 
     const requestId = ++previewRequestId;
+    const filters = getCategoryFilters();
     try {
       const res = await fetch("/api/preview", {
         method: "POST",
@@ -251,7 +287,8 @@
         body: JSON.stringify({
           categoryIds,
           role: state.previewRole,
-          matchCode: getMatchCode(categoryIds),
+          matchCode: getMatchCode(categoryIds, filters),
+          filters,
           ...buildMeta(),
         }),
       });
@@ -289,6 +326,7 @@
     button.textContent = "Generating…";
     setStatus("");
 
+    const filters = getCategoryFilters();
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -297,7 +335,8 @@
           categoryIds,
           role,
           format,
-          matchCode: getMatchCode(categoryIds),
+          matchCode: getMatchCode(categoryIds, filters),
+          filters,
           ...buildMeta(),
         }),
       });
