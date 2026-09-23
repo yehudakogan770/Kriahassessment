@@ -89,37 +89,51 @@ function renderNotesBox() {
   </section>`;
 }
 
-function renderWordCell(word, role) {
-  // Sized per-word (not per-document/category) so a lone short letter and a
-  // long multi-syllable word each get a font-size that fits their own text -
-  // the .cell box itself stays a fixed size everywhere (see css()), so
-  // "tier" here only ever changes the text, never the card.
-  const tier = sizeTier([word]);
+function chunk(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+function renderWordCell(word, role, tier) {
   const catBadge =
     role === "teacher"
       ? `<span class="cat-num" title="Category ${word.categoryNumber}">${word.categoryNumber}</span>`
       : "";
   return `
         <div class="cell tier-${tier}">
-          <span class="seq-num">${word.rowNumber}</span>
           ${catBadge}
           <span class="word-text">${escapeHtml(word.text)}</span>
         </div>`;
 }
 
 function renderWordGrid(words, role, columns) {
+  // One tier for the whole grid (not per-word) so every word - a lone
+  // letter included - renders at the same font size; the .cell box itself
+  // is already a fixed size everywhere regardless of tier (see css()).
+  const tier = sizeTier(words);
+
   // Teacher and Student share the same continuous grid - no per-category
   // grouping or headings, so a category's word count never leaves a
   // ragged, empty-looking gap before the next category. The Teacher copy
   // still shows which category each word belongs to via the small corner
   // badge renderWordCell() adds per word (see role in that function), and
   // the Results Summary table above still lists every category by name.
-  const cells = words.map((w) => renderWordCell(w, role)).join("\n");
+  //
+  // Numbered by line (not by word) - each row of the grid gets one number,
+  // in a narrow column of its own so it lines up with every row.
+  const lines = chunk(words, columns)
+    .map(
+      (lineWords, i) => `
+      <div class="grid-line" style="grid-template-columns: 22px repeat(${columns}, 1fr);">
+        <span class="line-num">${i + 1}</span>
+        ${lineWords.map((w) => renderWordCell(w, role, tier)).join("\n")}
+      </div>`
+    )
+    .join("\n");
   return `
     <section class="word-grid">
-      <div class="grid" style="grid-template-columns: repeat(${columns}, 1fr);">
-        ${cells}
-      </div>
+      ${lines}
     </section>`;
 }
 
@@ -282,10 +296,18 @@ function css() {
 
     .word-grid { }
 
-    .grid {
+    .grid-line {
       display: grid;
       gap: 3px;
-      margin-bottom: 2px;
+      margin-bottom: 3px;
+    }
+    .line-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7.5pt;
+      color: #999;
+      font-family: 'Segoe UI', Arial, sans-serif;
     }
     .cell {
       container-type: inline-size;
@@ -305,14 +327,6 @@ function css() {
          height) or an xl cell would still grow past it and stretch just
          its row taller than the rest. */
       min-height: 54pt;
-    }
-    .cell .seq-num {
-      position: absolute;
-      top: 2px;
-      right: 4px;
-      font-size: 7pt;
-      color: #999;
-      font-family: 'Segoe UI', Arial, sans-serif;
     }
     .cell .cat-num {
       position: absolute;
@@ -392,4 +406,4 @@ function buildHtml({ role, assembled, meta = {} }) {
 </html>`;
 }
 
-module.exports = { buildHtml, escapeHtml, sizeTier, letterCount, GENERAL_SKILLS };
+module.exports = { buildHtml, escapeHtml, sizeTier, letterCount, GENERAL_SKILLS, chunk };

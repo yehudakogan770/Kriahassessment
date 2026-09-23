@@ -142,7 +142,7 @@ function updateFavicon(dataUrl) {
     "c14-g2-sheva-after-shuruk-in-beg": "Sheva Rules",
     "c15-g2-sheva-after-sheva": "Sheva Rules",
     "c16-g2-sheva-under-twin-letters": "Sheva Rules",
-    "c17-shuruk-in-beginning": "Sheva Rules",
+    "c17-shuruk-in-beginning": "Exception Rules",
     "c18-confusing-dagesh-vav-vs-shuruk": "Exception Rules",
     "c19-confusing-dagesh-shared-nekudah-dot-shin-sin": "Exception Rules",
     "c20-confusing-dagesh-vav-vs-cholam-g2": "Exception Rules",
@@ -696,7 +696,11 @@ function updateFavicon(dataUrl) {
     onSelectionChanged();
   });
   el.clearAll.addEventListener("click", () => {
-    el.categoryList.querySelectorAll("input[type=checkbox]").forEach((cb) => (cb.checked = false));
+    // Re-rendering from scratch (rather than just unchecking boxes) also
+    // clears every category's word-picker chips and "use only N" limit -
+    // those aren't reset by unchecking alone, since a checkbox's own
+    // change handler only hides that state, it doesn't clear it.
+    renderCategoryList();
     onSelectionChanged();
   });
   el.downloadTeacher.addEventListener("click", () => exportRole("teacher"));
