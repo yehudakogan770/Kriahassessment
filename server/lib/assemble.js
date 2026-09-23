@@ -52,6 +52,61 @@ function shuffle(arr, rng = Math.random) {
 }
 
 /**
+ * Shuffles `items` (objects with a `.text`) so that, wherever achievable,
+ * no two items with the same `text` land within `minGap` positions of each
+ * other - e.g. so the Alef Bet doesn't repeat a letter too soon after its
+ * last appearance. Uses the standard "rearrange with a cooldown" greedy
+ * strategy: at each position, place whichever still-eligible (not on
+ * cooldown) text has the most copies left, so the hardest-to-place values
+ * never get stranded with nowhere left to go. Ties are broken with `rng`,
+ * and per-text copies are pre-shuffled with it too, so a seeded `rng`
+ * still gives a reproducible order.
+ *
+ * When there aren't enough distinct values to keep everyone `minGap` apart
+ * (e.g. only 2-3 distinct letters selected), the constraint is relaxed
+ * exactly where needed rather than left unable to make progress - it gets
+ * as close to `minGap` as the selection allows.
+ */
+function spacedShuffle(items, minGap, rng = Math.random) {
+  if (items.length <= 1 || minGap <= 0) {
+    shuffle(items, rng);
+    return;
+  }
+
+  const buckets = new Map();
+  for (const item of items) {
+    if (!buckets.has(item.text)) buckets.set(item.text, []);
+    buckets.get(item.text).push(item);
+  }
+  for (const bucket of buckets.values()) shuffle(bucket, rng);
+
+  const remaining = new Map([...buckets].map(([text, list]) => [text, list.length]));
+  const lastUsedAt = new Map();
+  const result = [];
+
+  while (result.length < items.length) {
+    const idx = result.length;
+    const candidates = [...remaining.entries()].filter(([, count]) => count > 0);
+    let eligible = candidates.filter(
+      ([text]) => !lastUsedAt.has(text) || idx - lastUsedAt.get(text) > minGap
+    );
+    // Nothing satisfies the gap here - too few distinct values remain for
+    // the stretch left. Relax it for just this pick rather than stalling.
+    if (eligible.length === 0) eligible = candidates;
+
+    const maxCount = Math.max(...eligible.map(([, count]) => count));
+    const tied = eligible.filter(([, count]) => count === maxCount);
+    const [text] = tied[Math.floor(rng() * tied.length)];
+
+    result.push(buckets.get(text).pop());
+    remaining.set(text, remaining.get(text) - 1);
+    lastUsedAt.set(text, idx);
+  }
+
+  for (let i = 0; i < items.length; i++) items[i] = result[i];
+}
+
+/**
  * Turns a set of selected category ids into the numbered word list both
  * document builders (HTML/PDF and docx) render from.
  *
@@ -124,7 +179,10 @@ function assemble(categoryIds, filters = {}, matchCode) {
     f.wordList.map((text) => ({ text, categoryNumber: f.categoryNumber }))
   );
   const code = matchCode || generateMatchCode();
-  shuffle(words, mulberry32(hashSeed(code)));
+  // minGap 8: e.g. keeps the Alef Bet from repeating the same letter again
+  // within its next 8 slots. Harmless for categories with no repeated
+  // words - with every text distinct, this is just a uniform shuffle.
+  spacedShuffle(words, 8, mulberry32(hashSeed(code)));
   words.forEach((w, i) => {
     w.rowNumber = i + 1;
   });

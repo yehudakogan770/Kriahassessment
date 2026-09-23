@@ -17,7 +17,7 @@ const {
   HeightRule,
   convertInchesToTwip,
 } = require("docx");
-const { sizeTier, GENERAL_SKILLS } = require("./htmlTemplate");
+const { sizeTier, GENERAL_SKILLS, chunk } = require("./htmlTemplate");
 const { TEACHER_INSTRUCTIONS } = require("./instructions");
 
 const FONT = "David";
@@ -270,26 +270,14 @@ function notesBoxBlock() {
   return [heading, ...lines];
 }
 
-function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
-
 // Student copy: bigger and bolder than Teacher's, since the student is the
 // one actually reading it.
 const STUDENT_SIZE_SCALE = 1.12;
 
-function wordCell(word, role, columns, cellWidth) {
-  // Sized per-word (not per-document) so a lone short letter and a long
-  // multi-syllable word each get a font-size that fits their own text - the
-  // cell's row height (see wordGridBlocks) stays fixed everywhere, so this
-  // only ever changes the text, never the card.
-  const tier = sizeTier([word]);
+function wordCell(word, role, columns, cellWidth, tier) {
   const isStudent = role === "student";
   let wordSize = scaledTierSize(tier, columns);
   if (isStudent) wordSize = Math.max(16, Math.round((wordSize * STUDENT_SIZE_SCALE) / 2) * 2);
-  const seqRun = new TextRun({ text: String(word.rowNumber), size: 15, color: "888888", font: UI_FONT });
 
   const wordRunChildren = [new TextRun({ text: word.text, size: wordSize, font: FONT, bold: isStudent })];
   if (role === "teacher") {
@@ -311,8 +299,21 @@ function wordCell(word, role, columns, cellWidth) {
     verticalAlign: VerticalAlign.CENTER,
     margins: { top: 20, bottom: 30, left: 60, right: 60 },
     children: [
-      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [seqRun] }),
-      new Paragraph({ bidirectional: true, alignment: AlignmentType.CENTER, spacing: { before: 0 }, children: wordRunChildren }),
+      new Paragraph({ bidirectional: true, alignment: AlignmentType.CENTER, children: wordRunChildren }),
+    ],
+  });
+}
+
+function lineNumberCell(number, width) {
+  return new TableCell({
+    width: { size: width, type: WidthType.DXA },
+    borders: NO_TABLE_BORDERS,
+    verticalAlign: VerticalAlign.CENTER,
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: String(number), size: 15, color: GRAY, font: UI_FONT })],
+      }),
     ],
   });
 }
@@ -325,31 +326,46 @@ function emptyCell(cellWidth) {
   });
 }
 
+// Line-number column width - narrow, just enough for a 1-2 digit number.
+const LINE_NUM_WIDTH_DXA = 380;
+
 function wordGridBlocks(words, role, columns, usableWidth) {
+  // One tier for the whole grid (not per-word) so every word - a lone
+  // letter included - renders at the same font size; row height (below)
+  // is already fixed everywhere regardless of tier.
+  const tier = sizeTier(words);
+
   // Teacher and Student share the same continuous table - no per-category
   // headings, so a category's word count never leaves a ragged row of
   // empty bordered cells before the next category. The Teacher copy still
   // shows which category each word belongs to via the small superscript
   // number wordCell() adds per word (see role in that function), and the
   // Results Summary table above still lists every category by name.
-  const cellWidth = Math.floor(usableWidth / columns);
+  //
+  // Numbered by line (not by word) - a narrow first column holds one
+  // number per row instead of a number in every cell.
+  const cellWidth = Math.floor((usableWidth - LINE_NUM_WIDTH_DXA) / columns);
   // Fixed minimum row height so every card is the same size regardless of
   // which word (and therefore which tier) lands in it - generous enough to
   // fit the largest tier's text at the smallest allowed column count (2).
   // The Student copy's text runs bigger (see STUDENT_SIZE_SCALE), so its
   // rows need proportionally more room.
   const rowHeight = { value: role === "student" ? 1250 : 1100, rule: HeightRule.ATLEAST };
-  const rows = chunk(words, columns).map((rowWords) => {
-    const cells = rowWords.map((w) => wordCell(w, role, columns, cellWidth));
+  const rows = chunk(words, columns).map((rowWords, i) => {
+    const cells = rowWords.map((w) => wordCell(w, role, columns, cellWidth, tier));
     while (cells.length < columns) cells.push(emptyCell(cellWidth));
-    return new TableRow({ cantSplit: true, height: rowHeight, children: cells });
+    return new TableRow({
+      cantSplit: true,
+      height: rowHeight,
+      children: [lineNumberCell(i + 1, LINE_NUM_WIDTH_DXA), ...cells],
+    });
   });
 
   const blocks = [
     new Table({
       width: { size: usableWidth, type: WidthType.DXA },
       visuallyRightToLeft: true,
-      columnWidths: Array(columns).fill(cellWidth),
+      columnWidths: [LINE_NUM_WIDTH_DXA, ...Array(columns).fill(cellWidth)],
       rows,
     }),
   ];

@@ -632,7 +632,7 @@ button:focus-visible, .tab:focus-visible, .radio-pill:has(input:focus-visible) {
           <h2>Word Bank</h2>
           <div class="btn-group">
             <button type="button" id="select-all" class="btn-link">Select all</button>
-            <button type="button" id="clear-all" class="btn-link">Clear</button>
+            <button type="button" id="clear-all" class="btn-link">Reset</button>
           </div>
         </div>
         <p class="hint">Numbers shown here are the reference numbers that appear next to each word on the <strong>Teacher</strong> copy only.</p>
@@ -34057,6 +34057,61 @@ function shuffle(arr, rng = Math.random) {
 }
 
 /**
+ * Shuffles `items` (objects with a `.text`) so that, wherever achievable,
+ * no two items with the same `text` land within `minGap` positions of each
+ * other - e.g. so the Alef Bet doesn't repeat a letter too soon after its
+ * last appearance. Uses the standard "rearrange with a cooldown" greedy
+ * strategy: at each position, place whichever still-eligible (not on
+ * cooldown) text has the most copies left, so the hardest-to-place values
+ * never get stranded with nowhere left to go. Ties are broken with `rng`,
+ * and per-text copies are pre-shuffled with it too, so a seeded `rng`
+ * still gives a reproducible order.
+ *
+ * When there aren't enough distinct values to keep everyone `minGap` apart
+ * (e.g. only 2-3 distinct letters selected), the constraint is relaxed
+ * exactly where needed rather than left unable to make progress - it gets
+ * as close to `minGap` as the selection allows.
+ */
+function spacedShuffle(items, minGap, rng = Math.random) {
+  if (items.length <= 1 || minGap <= 0) {
+    shuffle(items, rng);
+    return;
+  }
+
+  const buckets = new Map();
+  for (const item of items) {
+    if (!buckets.has(item.text)) buckets.set(item.text, []);
+    buckets.get(item.text).push(item);
+  }
+  for (const bucket of buckets.values()) shuffle(bucket, rng);
+
+  const remaining = new Map([...buckets].map(([text, list]) => [text, list.length]));
+  const lastUsedAt = new Map();
+  const result = [];
+
+  while (result.length < items.length) {
+    const idx = result.length;
+    const candidates = [...remaining.entries()].filter(([, count]) => count > 0);
+    let eligible = candidates.filter(
+      ([text]) => !lastUsedAt.has(text) || idx - lastUsedAt.get(text) > minGap
+    );
+    // Nothing satisfies the gap here - too few distinct values remain for
+    // the stretch left. Relax it for just this pick rather than stalling.
+    if (eligible.length === 0) eligible = candidates;
+
+    const maxCount = Math.max(...eligible.map(([, count]) => count));
+    const tied = eligible.filter(([, count]) => count === maxCount);
+    const [text] = tied[Math.floor(rng() * tied.length)];
+
+    result.push(buckets.get(text).pop());
+    remaining.set(text, remaining.get(text) - 1);
+    lastUsedAt.set(text, idx);
+  }
+
+  for (let i = 0; i < items.length; i++) items[i] = result[i];
+}
+
+/**
  * Turns a set of selected category ids into the numbered word list both
  * document builders (HTML/PDF and docx) render from.
  *
@@ -34129,7 +34184,10 @@ function assemble(categoryIds, filters = {}, matchCode) {
     f.wordList.map((text) => ({ text, categoryNumber: f.categoryNumber }))
   );
   const code = matchCode || generateMatchCode();
-  shuffle(words, mulberry32(hashSeed(code)));
+  // minGap 8: e.g. keeps the Alef Bet from repeating the same letter again
+  // within its next 8 slots. Harmless for categories with no repeated
+  // words - with every text distinct, this is just a uniform shuffle.
+  spacedShuffle(words, 8, mulberry32(hashSeed(code)));
   words.forEach((w, i) => {
     w.rowNumber = i + 1;
   });
@@ -34234,37 +34292,51 @@ function renderNotesBox() {
   </section>`;
 }
 
-function renderWordCell(word, role) {
-  // Sized per-word (not per-document/category) so a lone short letter and a
-  // long multi-syllable word each get a font-size that fits their own text -
-  // the .cell box itself stays a fixed size everywhere (see css()), so
-  // "tier" here only ever changes the text, never the card.
-  const tier = sizeTier([word]);
+function chunk(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+function renderWordCell(word, role, tier) {
   const catBadge =
     role === "teacher"
       ? `<span class="cat-num" title="Category ${word.categoryNumber}">${word.categoryNumber}</span>`
       : "";
   return `
         <div class="cell tier-${tier}">
-          <span class="seq-num">${word.rowNumber}</span>
           ${catBadge}
           <span class="word-text">${escapeHtml(word.text)}</span>
         </div>`;
 }
 
 function renderWordGrid(words, role, columns) {
+  // One tier for the whole grid (not per-word) so every word - a lone
+  // letter included - renders at the same font size; the .cell box itself
+  // is already a fixed size everywhere regardless of tier (see css()).
+  const tier = sizeTier(words);
+
   // Teacher and Student share the same continuous grid - no per-category
   // grouping or headings, so a category's word count never leaves a
   // ragged, empty-looking gap before the next category. The Teacher copy
   // still shows which category each word belongs to via the small corner
   // badge renderWordCell() adds per word (see role in that function), and
   // the Results Summary table above still lists every category by name.
-  const cells = words.map((w) => renderWordCell(w, role)).join("\n");
+  //
+  // Numbered by line (not by word) - each row of the grid gets one number,
+  // in a narrow column of its own so it lines up with every row.
+  const lines = chunk(words, columns)
+    .map(
+      (lineWords, i) => `
+      <div class="grid-line" style="grid-template-columns: 22px repeat(${columns}, 1fr);">
+        <span class="line-num">${i + 1}</span>
+        ${lineWords.map((w) => renderWordCell(w, role, tier)).join("\n")}
+      </div>`
+    )
+    .join("\n");
   return `
     <section class="word-grid">
-      <div class="grid" style="grid-template-columns: repeat(${columns}, 1fr);">
-        ${cells}
-      </div>
+      ${lines}
     </section>`;
 }
 
@@ -34427,10 +34499,18 @@ function css() {
 
     .word-grid { }
 
-    .grid {
+    .grid-line {
       display: grid;
       gap: 3px;
-      margin-bottom: 2px;
+      margin-bottom: 3px;
+    }
+    .line-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7.5pt;
+      color: #999;
+      font-family: 'Segoe UI', Arial, sans-serif;
     }
     .cell {
       container-type: inline-size;
@@ -34450,14 +34530,6 @@ function css() {
          height) or an xl cell would still grow past it and stretch just
          its row taller than the rest. */
       min-height: 54pt;
-    }
-    .cell .seq-num {
-      position: absolute;
-      top: 2px;
-      right: 4px;
-      font-size: 7pt;
-      color: #999;
-      font-family: 'Segoe UI', Arial, sans-serif;
     }
     .cell .cat-num {
       position: absolute;
@@ -34809,26 +34881,14 @@ function notesBoxBlock() {
   return [heading, ...lines];
 }
 
-function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
-
 // Student copy: bigger and bolder than Teacher's, since the student is the
 // one actually reading it.
 const STUDENT_SIZE_SCALE = 1.12;
 
-function wordCell(word, role, columns, cellWidth) {
-  // Sized per-word (not per-document) so a lone short letter and a long
-  // multi-syllable word each get a font-size that fits their own text - the
-  // cell's row height (see wordGridBlocks) stays fixed everywhere, so this
-  // only ever changes the text, never the card.
-  const tier = sizeTier([word]);
+function wordCell(word, role, columns, cellWidth, tier) {
   const isStudent = role === "student";
   let wordSize = scaledTierSize(tier, columns);
   if (isStudent) wordSize = Math.max(16, Math.round((wordSize * STUDENT_SIZE_SCALE) / 2) * 2);
-  const seqRun = new TextRun({ text: String(word.rowNumber), size: 15, color: "888888", font: UI_FONT });
 
   const wordRunChildren = [new TextRun({ text: word.text, size: wordSize, font: FONT, bold: isStudent })];
   if (role === "teacher") {
@@ -34850,8 +34910,21 @@ function wordCell(word, role, columns, cellWidth) {
     verticalAlign: VerticalAlign.CENTER,
     margins: { top: 20, bottom: 30, left: 60, right: 60 },
     children: [
-      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 0 }, children: [seqRun] }),
-      new Paragraph({ bidirectional: true, alignment: AlignmentType.CENTER, spacing: { before: 0 }, children: wordRunChildren }),
+      new Paragraph({ bidirectional: true, alignment: AlignmentType.CENTER, children: wordRunChildren }),
+    ],
+  });
+}
+
+function lineNumberCell(number, width) {
+  return new TableCell({
+    width: { size: width, type: WidthType.DXA },
+    borders: NO_TABLE_BORDERS,
+    verticalAlign: VerticalAlign.CENTER,
+    children: [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: String(number), size: 15, color: GRAY, font: UI_FONT })],
+      }),
     ],
   });
 }
@@ -34864,31 +34937,46 @@ function emptyCell(cellWidth) {
   });
 }
 
+// Line-number column width - narrow, just enough for a 1-2 digit number.
+const LINE_NUM_WIDTH_DXA = 380;
+
 function wordGridBlocks(words, role, columns, usableWidth) {
+  // One tier for the whole grid (not per-word) so every word - a lone
+  // letter included - renders at the same font size; row height (below)
+  // is already fixed everywhere regardless of tier.
+  const tier = sizeTier(words);
+
   // Teacher and Student share the same continuous table - no per-category
   // headings, so a category's word count never leaves a ragged row of
   // empty bordered cells before the next category. The Teacher copy still
   // shows which category each word belongs to via the small superscript
   // number wordCell() adds per word (see role in that function), and the
   // Results Summary table above still lists every category by name.
-  const cellWidth = Math.floor(usableWidth / columns);
+  //
+  // Numbered by line (not by word) - a narrow first column holds one
+  // number per row instead of a number in every cell.
+  const cellWidth = Math.floor((usableWidth - LINE_NUM_WIDTH_DXA) / columns);
   // Fixed minimum row height so every card is the same size regardless of
   // which word (and therefore which tier) lands in it - generous enough to
   // fit the largest tier's text at the smallest allowed column count (2).
   // The Student copy's text runs bigger (see STUDENT_SIZE_SCALE), so its
   // rows need proportionally more room.
   const rowHeight = { value: role === "student" ? 1250 : 1100, rule: HeightRule.ATLEAST };
-  const rows = chunk(words, columns).map((rowWords) => {
-    const cells = rowWords.map((w) => wordCell(w, role, columns, cellWidth));
+  const rows = chunk(words, columns).map((rowWords, i) => {
+    const cells = rowWords.map((w) => wordCell(w, role, columns, cellWidth, tier));
     while (cells.length < columns) cells.push(emptyCell(cellWidth));
-    return new TableRow({ cantSplit: true, height: rowHeight, children: cells });
+    return new TableRow({
+      cantSplit: true,
+      height: rowHeight,
+      children: [lineNumberCell(i + 1, LINE_NUM_WIDTH_DXA), ...cells],
+    });
   });
 
   const blocks = [
     new Table({
       width: { size: usableWidth, type: WidthType.DXA },
       visuallyRightToLeft: true,
-      columnWidths: Array(columns).fill(cellWidth),
+      columnWidths: [LINE_NUM_WIDTH_DXA, ...Array(columns).fill(cellWidth)],
       rows,
     }),
   ];
@@ -35111,7 +35199,7 @@ function updateFavicon(dataUrl) {
     "c14-g2-sheva-after-shuruk-in-beg": "Sheva Rules",
     "c15-g2-sheva-after-sheva": "Sheva Rules",
     "c16-g2-sheva-under-twin-letters": "Sheva Rules",
-    "c17-shuruk-in-beginning": "Sheva Rules",
+    "c17-shuruk-in-beginning": "Exception Rules",
     "c18-confusing-dagesh-vav-vs-shuruk": "Exception Rules",
     "c19-confusing-dagesh-shared-nekudah-dot-shin-sin": "Exception Rules",
     "c20-confusing-dagesh-vav-vs-cholam-g2": "Exception Rules",
@@ -35665,7 +35753,11 @@ function updateFavicon(dataUrl) {
     onSelectionChanged();
   });
   el.clearAll.addEventListener("click", () => {
-    el.categoryList.querySelectorAll("input[type=checkbox]").forEach((cb) => (cb.checked = false));
+    // Re-rendering from scratch (rather than just unchecking boxes) also
+    // clears every category's word-picker chips and "use only N" limit -
+    // those aren't reset by unchecking alone, since a checkbox's own
+    // change handler only hides that state, it doesn't clear it.
+    renderCategoryList();
     onSelectionChanged();
   });
   el.downloadTeacher.addEventListener("click", () => exportRole("teacher"));
