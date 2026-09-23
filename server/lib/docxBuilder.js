@@ -49,13 +49,7 @@ const GRID_CELL_BORDERS = {
   left: CELL_BORDER,
   right: CELL_BORDER,
 };
-const BOX_BORDER = { style: BorderStyle.SINGLE, size: 6, color: "444444" };
-const BOX_PARAGRAPH_BORDER = {
-  top: BOX_BORDER,
-  bottom: BOX_BORDER,
-  left: BOX_BORDER,
-  right: BOX_BORDER,
-};
+const RULE_BORDER = { style: BorderStyle.SINGLE, size: 8, color: "333333" };
 
 // Base half-point (docx `size` unit) font sizes per word-length tier, tuned
 // for a 3-column grid; scaledTierSize() adjusts for the actual column count.
@@ -121,10 +115,16 @@ function metaFieldsTable(role, meta, usableWidth) {
     fields.push({ label: "Fluency speed", value: "" });
   }
 
-  const cellWidth = Math.floor(usableWidth / fields.length);
+  // Student Name gets more table space than the rest, matching
+  // htmlTemplate.js's meta-fields grid - it's the one field that regularly
+  // holds a real (potentially long) value, where the others are short or
+  // left blank for handwriting.
+  const weights = fields.map((f, i) => (i === 0 ? 1.8 : 1));
+  const totalWeight = weights.reduce((sum, w) => sum + w, 0);
   const cells = fields.map(
-    (f) =>
-      new TableCell({
+    (f, i) => {
+      const cellWidth = Math.floor((usableWidth * weights[i]) / totalWeight);
+      return new TableCell({
         width: { size: cellWidth, type: WidthType.DXA },
         borders: { top: NONE_BORDER, bottom: NONE_BORDER, left: NONE_BORDER, right: NONE_BORDER },
         children: [
@@ -142,7 +142,8 @@ function metaFieldsTable(role, meta, usableWidth) {
             ],
           }),
         ],
-      })
+      });
+    }
   );
 
   return new Table({
@@ -153,23 +154,30 @@ function metaFieldsTable(role, meta, usableWidth) {
   });
 }
 
-function instructionsBlock() {
-  const heading = new Paragraph({
+/** A section label with a plain rule underneath - matches htmlTemplate.js's
+ * .section-heading (uppercase, letter-spaced, bottom rule) instead of the
+ * boxed-card look, so Instructions/Results Summary/Notes read as normal
+ * document sections rather than stacked UI cards. */
+function sectionHeading(text) {
+  return new Paragraph({
     alignment: AlignmentType.LEFT,
-    border: BOX_PARAGRAPH_BORDER,
-    spacing: { before: 60, after: 30 },
+    border: { bottom: RULE_BORDER },
+    spacing: { before: 100, after: 40 },
     children: [
-      new TextRun({ text: "Teacher Testing Instructions", bold: true, size: 20, font: UI_FONT }),
+      new TextRun({ text: text.toUpperCase(), bold: true, size: 20, font: UI_FONT, characterSpacing: 10 }),
     ],
   });
+}
+
+function instructionsBlock() {
+  const heading = sectionHeading("Teacher Testing Instructions");
 
   const items = TEACHER_INSTRUCTIONS.map(
     (line, i) =>
       new Paragraph({
         alignment: AlignmentType.LEFT,
-        border: BOX_PARAGRAPH_BORDER,
-        indent: { left: 200, right: 200 },
-        spacing: { after: i === TEACHER_INSTRUCTIONS.length - 1 ? 80 : 0 },
+        indent: { left: 100 },
+        spacing: { after: i === TEACHER_INSTRUCTIONS.length - 1 ? 100 : 20 },
         children: [new TextRun({ text: `${i + 1}. ${line}`, size: 16, font: UI_FONT })],
       })
   );
@@ -213,9 +221,9 @@ function resultsSummaryTable(summary, usableWidth) {
     (name) =>
       new TableRow({
         children: [
-          cell("•", { color: GRAY, bold: true, shading: "F2F2F2" }),
-          cell(name, { font: UI_FONT, bold: true, align: AlignmentType.LEFT, shading: "F2F2F2" }),
-          cell("______", { shading: "F2F2F2" }),
+          cell("–", { color: GRAY }),
+          cell(name, { font: UI_FONT, bold: true, align: AlignmentType.LEFT }),
+          cell("______"),
         ],
       })
   );
@@ -231,11 +239,7 @@ function resultsSummaryTable(summary, usableWidth) {
       })
   );
 
-  const heading = new Paragraph({
-    alignment: AlignmentType.LEFT,
-    spacing: { before: 80, after: 30 },
-    children: [new TextRun({ text: "Results Summary", bold: true, size: 20, font: UI_FONT })],
-  });
+  const heading = sectionHeading("Results Summary");
 
   const table = new Table({
     width: { size: usableWidth, type: WidthType.DXA },
@@ -251,26 +255,13 @@ function resultsSummaryTable(summary, usableWidth) {
 }
 
 function notesBoxBlock() {
-  const heading = new Paragraph({
-    alignment: AlignmentType.LEFT,
-    border: BOX_PARAGRAPH_BORDER,
-    spacing: { before: 60, after: 30 },
-    children: [new TextRun({ text: "Notes", bold: true, size: 20, font: UI_FONT })],
-  });
+  const heading = sectionHeading("Notes");
 
-  // Same border on every paragraph in the sequence (matching
-  // instructionsBlock's pattern) so Word merges them into one continuous
-  // box rather than drawing a frame around each line separately. A ruled
-  // bottom edge on each blank line gives the teacher somewhere to write.
-  const lineBorder = {
-    ...BOX_PARAGRAPH_BORDER,
-    bottom: { style: BorderStyle.SINGLE, size: 4, color: "999999" },
-  };
+  const lineBorder = { bottom: { style: BorderStyle.SINGLE, size: 4, color: "999999" } };
   const lines = [0, 1, 2].map(
-    (i) =>
+    () =>
       new Paragraph({
-        border: i === 2 ? BOX_PARAGRAPH_BORDER : lineBorder,
-        indent: { left: 200, right: 200 },
+        border: lineBorder,
         spacing: { after: 220 },
         children: [new TextRun({ text: " ", size: 16, font: UI_FONT })],
       })
