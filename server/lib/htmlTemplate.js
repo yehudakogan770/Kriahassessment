@@ -33,8 +33,8 @@ function renderInstructions() {
     (line, i) => `<li>${escapeHtml(line)}</li>`
   ).join("\n");
   return `
-  <section class="instructions" dir="ltr">
-    <h2>Teacher Testing Instructions</h2>
+  <section class="doc-section instructions" dir="ltr">
+    <h2 class="section-heading">Teacher Testing Instructions</h2>
     <ol>${items}</ol>
   </section>`;
 }
@@ -48,7 +48,7 @@ function renderResultsSummary(summary) {
   const generalRows = GENERAL_SKILLS.map(
     (name) => `
       <tr>
-        <td class="num-cell"><span class="cat-badge cat-badge-general">&bull;</span></td>
+        <td class="num-cell"><span class="cat-badge cat-badge-general">&ndash;</span></td>
         <td class="name-cell">${name}</td>
         <td class="blank-cell">______</td>
       </tr>`
@@ -66,8 +66,8 @@ function renderResultsSummary(summary) {
     .join("\n");
 
   return `
-  <section class="results-summary" dir="ltr">
-    <h2>Results Summary</h2>
+  <section class="doc-section results-summary" dir="ltr">
+    <h2 class="section-heading">Results Summary</h2>
     <table>
       <thead>
         <tr>
@@ -83,8 +83,8 @@ function renderResultsSummary(summary) {
 
 function renderNotesBox() {
   return `
-  <section class="notes-box" dir="ltr">
-    <h2>Notes</h2>
+  <section class="doc-section notes-box" dir="ltr">
+    <h2 class="section-heading">Notes</h2>
     <div class="notes-lines"><span></span><span></span><span></span></div>
   </section>`;
 }
@@ -136,8 +136,14 @@ function renderMetaFields(role, meta) {
     fields.push({ label: "Fluency speed", value: "" });
   }
 
+  // Student Name gets more grid space than the rest - it's the one field
+  // that regularly holds a real (potentially long) value, where the others
+  // are either short or left blank for handwriting; a fixed equal split
+  // was clipping longer names.
+  const columnWidths = fields.map((f, i) => (i === 0 ? "1.8fr" : "1fr")).join(" ");
+
   return `
-  <div class="meta-fields" dir="ltr">
+  <div class="meta-fields" dir="ltr" style="grid-template-columns: ${columnWidths};">
     ${fields
       .map(
         (f) => `
@@ -168,7 +174,7 @@ function css() {
       display: flex;
       align-items: baseline;
       justify-content: space-between;
-      border-bottom: 2px solid #222;
+      border-bottom: 1.5pt solid #222;
       padding-bottom: 4px;
       margin-bottom: 5px;
     }
@@ -189,73 +195,64 @@ function css() {
       font-size: 21pt;
       letter-spacing: 0.18em;
     }
-    .doc-header .header-right {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .doc-header .role-badge {
-      font-size: 10pt;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #222;
-      color: #fff;
-      padding: 3px 10px;
-      border-radius: 10px;
-      white-space: nowrap;
-    }
-    .doc-header .match-tag {
+    .doc-header .role-info {
       font-size: 9pt;
       font-family: 'Segoe UI', Arial, sans-serif;
-      color: #7a1f2b;
-      border: 1px solid #7a1f2b;
-      padding: 2px 8px;
-      border-radius: 10px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
       white-space: nowrap;
+    }
+    .doc-header .role-info .code {
+      color: #7a1f2b;
+      font-weight: 700;
     }
 
     .meta-fields {
       direction: ltr;
       text-align: left;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 3px 20px;
+      display: grid;
+      gap: 4px 18px;
       font-family: 'Segoe UI', Arial, sans-serif;
       font-size: 9.5pt;
       border-bottom: 1px solid #999;
       padding-bottom: 4px;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
     }
-    .meta-fields .field { display: flex; gap: 5px; align-items: flex-end; }
-    .meta-fields .field-label { color: #444; }
+    .meta-fields .field { display: flex; gap: 5px; align-items: flex-end; min-width: 0; }
+    .meta-fields .field-label { color: #444; white-space: nowrap; }
     .meta-fields .field-value {
-      min-width: 80px;
+      min-width: 0;
+      flex: 1;
       border-bottom: 1px solid #666;
       padding: 0 4px;
+      overflow-wrap: break-word;
     }
 
-    .instructions {
+    .doc-section {
       direction: ltr;
       text-align: left;
-      border: 1px solid #444;
-      border-radius: 8px;
-      padding: 5px 12px 6px;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       font-family: 'Segoe UI', Arial, sans-serif;
       page-break-inside: avoid;
     }
-    .instructions h2, .results-summary h2, .notes-box h2 {
+    .section-heading {
       font-size: 10pt;
-      margin: 0 0 3px;
-      font-family: 'Segoe UI', Arial, sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #333;
+      border-bottom: 1.25pt solid #333;
+      padding-bottom: 2px;
+      margin: 0 0 5px;
     }
     .instructions ol {
-      margin: 3px 0 0;
+      margin: 0;
       padding-inline-start: 18px;
       font-size: 8.5pt;
-      line-height: 1.25;
+      line-height: 1.35;
     }
 
-    .results-summary { direction: ltr; text-align: left; margin-bottom: 6px; page-break-inside: avoid; }
     .results-summary table {
       width: 100%;
       border-collapse: collapse;
@@ -272,32 +269,16 @@ function css() {
     .results-summary .name-cell { text-align: left; font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; }
     .results-summary .blank-cell { color: #555; width: 120px; }
 
-    .notes-box {
-      direction: ltr;
-      text-align: left;
-      border: 1px solid #444;
-      border-radius: 8px;
-      padding: 5px 12px 7px;
-      margin-bottom: 6px;
-      font-family: 'Segoe UI', Arial, sans-serif;
-      page-break-inside: avoid;
-    }
-    .notes-lines { display: flex; flex-direction: column; gap: 11pt; margin-top: 2pt; }
+    .notes-lines { display: flex; flex-direction: column; gap: 12pt; margin-top: 4pt; }
     .notes-lines span { display: block; height: 0; border-bottom: 1px solid #999; }
 
     .cat-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: #7a1f2b;
-      color: #fff;
-      font-size: 9.5pt;
+      font-weight: 700;
+      color: #7a1f2b;
       font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 10pt;
     }
-    .cat-badge-general { background: #555; }
+    .cat-badge-general { color: #888; font-weight: 400; }
 
     .word-grid { }
 
@@ -310,7 +291,7 @@ function css() {
       container-type: inline-size;
       position: relative;
       border: 1px solid #999;
-      border-radius: 6px;
+      border-radius: 3px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -330,22 +311,16 @@ function css() {
       top: 2px;
       right: 4px;
       font-size: 7pt;
-      color: #777;
+      color: #999;
       font-family: 'Segoe UI', Arial, sans-serif;
     }
     .cell .cat-num {
       position: absolute;
       top: 2px;
       left: 4px;
-      font-size: 7pt;
-      color: #fff;
-      background: #7a1f2b;
-      border-radius: 50%;
-      width: 13px;
-      height: 13px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #7a1f2b;
       font-family: 'Segoe UI', Arial, sans-serif;
     }
     .word-text {
@@ -382,13 +357,15 @@ function buildHtml({ role, assembled, meta = {} }) {
   // The Student copy shows the pairing code instead of the descriptive
   // title, so a student can't read what's being assessed off their own
   // page - the Teacher copy keeps the real title and shows the same code
-  // as a small tag instead, to pair the two back up after handing them out.
+  // as plain text in the byline instead, to pair the two back up after
+  // handing them out.
   const titleHtml =
     role === "student" && matchCode
       ? `<h1 class="doc-title doc-code">${matchCode}</h1>`
       : `<h1 class="doc-title">${title}</h1>`;
-  const matchTagHtml =
-    role === "teacher" && matchCode ? `<span class="match-tag">Code ${matchCode}</span>` : "";
+  const roleInfoHtml = `<span class="role-info">${roleLabel}${
+    role === "teacher" && matchCode ? ` &middot; Code <span class="code">${matchCode}</span>` : ""
+  }</span>`;
 
   return `<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -404,10 +381,7 @@ function buildHtml({ role, assembled, meta = {} }) {
   <div class="doc-header">
     <span class="bh">ב"ה</span>
     ${titleHtml}
-    <div class="header-right">
-      ${matchTagHtml}
-      <span class="role-badge">${roleLabel}</span>
-    </div>
+    ${roleInfoHtml}
   </div>
   ${renderMetaFields(role, meta)}
   ${role === "teacher" ? renderInstructions() : ""}
