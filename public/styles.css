@@ -225,14 +225,29 @@ body {
 
 .preview-frame-wrap {
   flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   border: 1px solid var(--border);
   border-radius: 8px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: #ececec;
   position: relative;
   min-height: 300px;
 }
-#preview-frame { width: 100%; height: 100%; border: none; background: #fff; }
+/* Sized in JS (fitPreviewToPage in app.js) to the page's real width scaled
+   down to fit, and real (possibly multi-page-tall) height - a real-sized
+   box, not just a CSS transform's visual effect, so the wrap's vertical
+   scrollbar measures the right amount for a long document. */
+.preview-page {
+  flex-shrink: 0;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+#preview-frame { display: block; border: none; background: #fff; }
 .preview-placeholder[hidden] { display: none; }
 .preview-placeholder {
   position: absolute;

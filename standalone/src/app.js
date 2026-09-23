@@ -173,6 +173,7 @@ function updateFavicon(dataUrl) {
     statusMessage: document.getElementById("status-message"),
     previewFrame: document.getElementById("preview-frame"),
     previewPage: document.getElementById("preview-page"),
+    previewDesk: document.querySelector(".preview-desk"),
     previewPlaceholder: document.getElementById("preview-placeholder"),
     printFrame: document.getElementById("print-frame"),
     headerMeta: document.getElementById("header-meta"),
@@ -608,6 +609,47 @@ function updateFavicon(dataUrl) {
     updatePreview();
   }
 
+  // Letter-size page, in CSS px at 96dpi (8.5in x 11in) - matches the real
+  // print/PDF dimensions, so laying the preview out at this width shows
+  // the same line-wrapping and column widths a printed page would have.
+  const PAGE_PX = { portrait: [816, 1056], landscape: [1056, 816] };
+
+  // The preview iframe has no natural "one page" height of its own - the
+  // document just reflows to whatever height its content needs. To show
+  // the *whole* page at once (rather than clipping it, or requiring the
+  // user to scroll inside a tiny page-shaped box), this renders the iframe
+  // at the real, unscaled page width, measures how tall that content
+  // actually comes out, then shrinks the whole thing down with a CSS
+  // transform to fit whatever room `.preview-desk` actually has - the same
+  // idea as a PDF viewer's "fit to page" zoom.
+  function fitPreviewToPage() {
+    const doc = el.previewFrame.contentDocument;
+    if (!doc || !doc.documentElement) return;
+    const [nativeW] = el.orientation.value === "landscape" ? PAGE_PX.landscape : PAGE_PX.portrait;
+
+    el.previewFrame.style.transform = "none";
+    el.previewFrame.style.width = nativeW + "px";
+    el.previewFrame.style.height = "10px"; // shrink first so it can't inflate the desk's own scrollHeight
+    const nativeH = Math.max(doc.documentElement.scrollHeight, 100);
+    el.previewFrame.style.height = nativeH + "px";
+
+    // Fits to *width* only, not height - a long document (more than one
+    // printed page's worth) should scroll vertically to see every page
+    // (.preview-desk is scrollable), the same as any normal document
+    // viewer, rather than being squeezed down to an illegibly tiny
+    // thumbnail just so all of it shows at once.
+    const deskStyle = getComputedStyle(el.previewDesk);
+    const padX = parseFloat(deskStyle.paddingLeft) + parseFloat(deskStyle.paddingRight);
+    const availW = el.previewDesk.clientWidth - padX;
+    const scale = Math.min(availW / nativeW, 1);
+
+    el.previewFrame.style.transform = `scale(${scale})`;
+    el.previewFrame.style.transformOrigin = "top left";
+    el.previewPage.style.width = Math.round(nativeW * scale) + "px";
+    el.previewPage.style.height = Math.round(nativeH * scale) + "px";
+  }
+  window.addEventListener("resize", () => { if (!el.previewFrame.hidden) fitPreviewToPage(); });
+
   function updatePreview() {
     const categoryIds = getSelectedCategoryIds();
     el.previewPage.classList.toggle("landscape", el.orientation.value === "landscape");
@@ -623,6 +665,7 @@ function updateFavicon(dataUrl) {
       const filters = getCategoryFilters();
       const assembled = assemble(categoryIds, filters, getMatchCode(categoryIds, filters));
       const html = buildHtml({ role: state.previewRole, assembled, meta: buildMeta() });
+      el.previewFrame.onload = fitPreviewToPage;
       el.previewFrame.srcdoc = html;
       el.previewFrame.hidden = false;
       el.previewPlaceholder.hidden = true;

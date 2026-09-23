@@ -56,6 +56,8 @@
     downloadStudent: document.getElementById("download-student"),
     statusMessage: document.getElementById("status-message"),
     previewFrame: document.getElementById("preview-frame"),
+    previewFrameWrap: document.querySelector(".preview-frame-wrap"),
+    previewPage: document.getElementById("preview-page"),
     previewPlaceholder: document.getElementById("preview-placeholder"),
     tabs: Array.from(document.querySelectorAll(".preview-tabs .tab")),
   };
@@ -298,6 +300,7 @@
         throw new Error(body.error || "Preview failed");
       }
       const html = await res.text();
+      el.previewFrame.onload = fitPreviewToPage;
       el.previewFrame.srcdoc = html;
       el.previewFrame.hidden = false;
       el.previewPlaceholder.hidden = true;
@@ -308,6 +311,49 @@
       el.previewPlaceholder.textContent = err.message || "Could not build preview.";
     }
   }
+
+  // Letter-size page, in CSS px at 96dpi (8.5in x 11in) - matches the real
+  // print/PDF dimensions, so laying the preview out at this width shows
+  // the same line-wrapping and column widths a printed page would have.
+  const PAGE_PX = { portrait: [816, 1056], landscape: [1056, 816] };
+
+  // The preview iframe has no natural "one page" height of its own - the
+  // document just reflows to whatever height its content needs. To show
+  // the *whole* page at once (rather than clipping it, or requiring the
+  // user to scroll inside a tiny box), this renders the iframe at the
+  // real, unscaled page width, measures how tall that content actually
+  // comes out, then shrinks the whole thing down with a CSS transform to
+  // fit whatever room the preview panel actually has - the same idea as a
+  // PDF viewer's "fit to page" zoom. `.preview-frame-wrap` centers it
+  // (flex + justify-content:center), and the default scale transform-
+  // origin (center) keeps that centering intact as it shrinks.
+  function fitPreviewToPage() {
+    const doc = el.previewFrame.contentDocument;
+    if (!doc || !doc.documentElement) return;
+    const [nativeW] = el.orientation.value === "landscape" ? PAGE_PX.landscape : PAGE_PX.portrait;
+
+    el.previewFrame.style.transform = "none";
+    el.previewFrame.style.width = nativeW + "px";
+    el.previewFrame.style.height = "10px"; // shrink first so it can't inflate the wrap's own size
+    const nativeH = Math.max(doc.documentElement.scrollHeight, 100);
+    el.previewFrame.style.height = nativeH + "px";
+
+    // Fits to *width* only, not height - a long document (more than one
+    // printed page's worth) should scroll vertically to see every page
+    // (.preview-frame-wrap is scrollable), the same as any normal document
+    // viewer, rather than being squeezed down to an illegibly tiny
+    // thumbnail just so all of it shows at once.
+    const wrapStyle = getComputedStyle(el.previewFrameWrap);
+    const padX = parseFloat(wrapStyle.paddingLeft) + parseFloat(wrapStyle.paddingRight);
+    const availW = el.previewFrameWrap.clientWidth - padX;
+    const scale = Math.min(availW / nativeW, 1);
+
+    el.previewFrame.style.transform = `scale(${scale})`;
+    el.previewFrame.style.transformOrigin = "top left";
+    el.previewPage.style.width = Math.round(nativeW * scale) + "px";
+    el.previewPage.style.height = Math.round(nativeH * scale) + "px";
+  }
+  window.addEventListener("resize", () => { if (!el.previewFrame.hidden) fitPreviewToPage(); });
 
   function parseFilename(contentDisposition, fallback) {
     if (!contentDisposition) return fallback;
