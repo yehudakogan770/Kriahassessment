@@ -49,6 +49,8 @@ function parseRequest(body) {
     hideDate,
     matchCode,
     filters,
+    includeLettersRecitation,
+    includeNekudotRecitation,
   } = body || {};
 
   if (!Array.isArray(categoryIds) || categoryIds.length === 0) {
@@ -69,6 +71,8 @@ function parseRequest(body) {
     hideDate: !!hideDate,
     columns: Math.min(Math.max(Number(columns) || 3, 2), 8),
     orientation: orientation === "landscape" ? "landscape" : "portrait",
+    includeLettersRecitation: !!includeLettersRecitation,
+    includeNekudotRecitation: !!includeNekudotRecitation,
   };
 
   // Lets a Teacher and Student request generated separately still land on

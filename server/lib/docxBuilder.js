@@ -15,10 +15,12 @@ const {
   PageNumber,
   PageOrientation,
   HeightRule,
+  ShadingType,
   convertInchesToTwip,
 } = require("docx");
 const { sizeTier, GENERAL_SKILLS } = require("./htmlTemplate");
 const { TEACHER_INSTRUCTIONS } = require("./instructions");
+const { getAlphabetInOrder, getNekudotList } = require("./recitation");
 
 const FONT = "David";
 const UI_FONT = "Segoe UI";
@@ -50,6 +52,9 @@ const GRID_CELL_BORDERS = {
   right: CELL_BORDER,
 };
 const RULE_BORDER = { style: BorderStyle.SINGLE, size: 8, color: "333333" };
+const LIGHT_BORDER = { style: BorderStyle.SINGLE, size: 2, color: "CCCCCC" };
+const LIGHT_GRID = { top: LIGHT_BORDER, bottom: LIGHT_BORDER, left: LIGHT_BORDER, right: LIGHT_BORDER };
+const BAR_SHADING = "CFCFCF";
 
 // Base half-point (docx `size` unit) font sizes per word-length tier, tuned
 // for a 3-column grid; scaledTierSize() adjusts for the actual column count.
@@ -254,6 +259,77 @@ function resultsSummaryTable(summary, usableWidth) {
   return [heading, table];
 }
 
+/** A gray title bar spanning the full width - used to label a recitation
+ * section, styled after the school's own reference assessment format
+ * rather than the plain heading+rule used elsewhere in this document. */
+function recitationBar(title, usableWidth) {
+  return new Table({
+    width: { size: usableWidth, type: WidthType.DXA },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: usableWidth, type: WidthType.DXA },
+            borders: NO_TABLE_BORDERS,
+            shading: { type: ShadingType.CLEAR, fill: BAR_SHADING },
+            margins: { top: 40, bottom: 40, left: 80, right: 80 },
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: title.toUpperCase(), bold: true, size: 19, font: UI_FONT })],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/** A "by heart" recitation check (the full alphabet in order, or the
+ * Nekudot) - a fixed, unshuffled set shown in a plain lightly-bordered
+ * grid under a gray title bar. Teacher-only Notes line; the grid itself
+ * is shown to both roles, since the student needs to see the
+ * letters/nekudot to recite them. */
+function recitationBlock(title, symbols, role, columns, usableWidth) {
+  const cellWidth = Math.floor(usableWidth / columns);
+  const rows = chunk(symbols, columns).map((rowSymbols) => {
+    const cells = rowSymbols.map(
+      (s) =>
+        new TableCell({
+          width: { size: cellWidth, type: WidthType.DXA },
+          borders: LIGHT_GRID,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, bidirectional: true, children: [new TextRun({ text: s, size: 36, font: FONT })] }),
+          ],
+        })
+    );
+    while (cells.length < columns) cells.push(emptyCell(cellWidth));
+    return new TableRow({ children: cells });
+  });
+
+  const blocks = [
+    recitationBar(title, usableWidth),
+    new Table({
+      width: { size: usableWidth, type: WidthType.DXA },
+      columnWidths: Array(columns).fill(cellWidth),
+      rows,
+    }),
+  ];
+
+  if (role === "teacher") {
+    blocks.push(
+      new Paragraph({
+        border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "999999" } },
+        spacing: { after: 120 },
+        children: [new TextRun({ text: "Notes: ", size: 16, color: GRAY, font: UI_FONT })],
+      })
+    );
+  }
+
+  return blocks;
+}
+
 function notesBoxBlock() {
   const heading = sectionHeading("Notes");
 
@@ -386,6 +462,14 @@ async function renderDocx({ role, assembled, meta = {} }) {
 
   if (role === "teacher") {
     children.push(...instructionsBlock());
+  }
+  if (meta.includeLettersRecitation) {
+    children.push(...recitationBlock("Can say the letters by heart, in order", getAlphabetInOrder(), role, 11, usableWidth));
+  }
+  if (meta.includeNekudotRecitation) {
+    children.push(...recitationBlock("Recites Nekudot by heart", getNekudotList(), role, 12, usableWidth));
+  }
+  if (role === "teacher") {
     children.push(...resultsSummaryTable(assembled.summary, usableWidth));
     children.push(...notesBoxBlock());
   }
