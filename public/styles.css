@@ -146,6 +146,16 @@ body {
 .category-row:hover { background: #fafafa; }
 .category-row .cat-name { flex: 1; }
 .category-row .cat-count { color: var(--muted); font-size: 12px; }
+.category-row .cat-repeat[hidden] { display: none; }
+.category-row .cat-repeat {
+  width: 52px;
+  font-size: 12px;
+  padding: 3px 5px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: #fff;
+  color: inherit;
+}
 .category-row .cat-badge[hidden] { display: none; }
 .category-row .cat-badge {
   display: inline-flex;

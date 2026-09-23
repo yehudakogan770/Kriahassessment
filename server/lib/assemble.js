@@ -121,8 +121,9 @@ function spacedShuffle(items, minGap, rng = Math.random) {
  * the same word on both copies - shuffling once here, rather than
  * separately per role, is what keeps that true.
  *
- * `filters` optionally narrows down a category's words two ways, which
- * can be combined - e.g. { "c01-letters-3x": { include: ["א", "ב"], limit: 10 } }:
+ * `filters` optionally narrows down and/or expands a category's words,
+ * which can be combined - e.g.
+ * { "c01-letters-3x": { include: ["א", "ב"], limit: 10, repeat: 5 } }:
  *   - `include`: specific words/letters to use, and nothing else (every
  *     occurrence of each - e.g. all 3 repetitions of a letter in
  *     "Letters (3x)") - for picking exactly which ones to test. Leaving
@@ -131,6 +132,10 @@ function spacedShuffle(items, minGap, rng = Math.random) {
  *     order, after the include filter) when a teacher just wants fewer
  *     words and doesn't care which ones - the original, simpler way to
  *     narrow a category down, kept alongside the newer per-word picker.
+ *   - `repeat`: repeats each distinct word/letter exactly this many times,
+ *     overriding whatever repeat pattern the source data happens to have
+ *     baked in (e.g. "Letters (3x)" is really a 1-4x mix per letter, not a
+ *     clean 3x) - for when a teacher wants a specific, even repeat count.
  * Categories not present in `filters`, or with an empty `include`, use
  * every word as before.
  *
@@ -162,10 +167,20 @@ function assemble(categoryIds, filters = {}, matchCode) {
     const f = filters[cat.id] || {};
     const include = Array.isArray(f.include) ? f.include : [];
     const kept = include.length ? cat.words.filter((w) => include.includes(w)) : cat.words;
-    let wordList = kept.length > 0 ? kept : cat.words;
-    if (Number.isInteger(f.limit) && f.limit > 0 && f.limit < wordList.length) {
-      wordList = wordList.slice(0, f.limit);
+    let base = kept.length > 0 ? kept : cat.words;
+
+    // A chosen repeat count replaces whatever repeat pattern happens to be
+    // baked into the source word-bank data (e.g. "Letters (3x)" is really
+    // a 1-4x mix per letter, not a clean 3x) - starting from the distinct
+    // words only, then repeating each one exactly `repeat` times.
+    const repeat = Number.isInteger(f.repeat) && f.repeat > 0 ? f.repeat : null;
+    if (repeat) base = [...new Set(base)];
+
+    if (Number.isInteger(f.limit) && f.limit > 0 && f.limit < base.length) {
+      base = base.slice(0, f.limit);
     }
+
+    const wordList = repeat ? base.flatMap((w) => Array(repeat).fill(w)) : base;
     return { categoryNumber, categoryId: cat.id, categoryName: cat.name, wordList };
   });
 

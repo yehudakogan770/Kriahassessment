@@ -89,12 +89,6 @@ function renderNotesBox() {
   </section>`;
 }
 
-function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
-
 function renderWordCell(word, role, tier) {
   const catBadge =
     role === "teacher"
@@ -119,21 +113,12 @@ function renderWordGrid(words, role, columns) {
   // still shows which category each word belongs to via the small corner
   // badge renderWordCell() adds per word (see role in that function), and
   // the Results Summary table above still lists every category by name.
-  //
-  // Numbered by line (not by word) - each row of the grid gets one number,
-  // in a narrow column of its own so it lines up with every row.
-  const lines = chunk(words, columns)
-    .map(
-      (lineWords, i) => `
-      <div class="grid-line" style="grid-template-columns: 22px repeat(${columns}, 1fr);">
-        <span class="line-num">${i + 1}</span>
-        ${lineWords.map((w) => renderWordCell(w, role, tier)).join("\n")}
-      </div>`
-    )
-    .join("\n");
+  const cells = words.map((w) => renderWordCell(w, role, tier)).join("\n");
   return `
     <section class="word-grid">
-      ${lines}
+      <div class="grid" style="grid-template-columns: repeat(${columns}, 1fr);">
+        ${cells}
+      </div>
     </section>`;
 }
 
@@ -296,18 +281,10 @@ function css() {
 
     .word-grid { }
 
-    .grid-line {
+    .grid {
       display: grid;
       gap: 3px;
-      margin-bottom: 3px;
-    }
-    .line-num {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 7.5pt;
-      color: #999;
-      font-family: 'Segoe UI', Arial, sans-serif;
+      margin-bottom: 2px;
     }
     .cell {
       container-type: inline-size;
@@ -406,4 +383,4 @@ function buildHtml({ role, assembled, meta = {} }) {
 </html>`;
 }
 
-module.exports = { buildHtml, escapeHtml, sizeTier, letterCount, GENERAL_SKILLS, chunk };
+module.exports = { buildHtml, escapeHtml, sizeTier, letterCount, GENERAL_SKILLS };

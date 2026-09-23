@@ -17,7 +17,7 @@ const {
   HeightRule,
   convertInchesToTwip,
 } = require("docx");
-const { sizeTier, GENERAL_SKILLS, chunk } = require("./htmlTemplate");
+const { sizeTier, GENERAL_SKILLS } = require("./htmlTemplate");
 const { TEACHER_INSTRUCTIONS } = require("./instructions");
 
 const FONT = "David";
@@ -304,20 +304,6 @@ function wordCell(word, role, columns, cellWidth, tier) {
   });
 }
 
-function lineNumberCell(number, width) {
-  return new TableCell({
-    width: { size: width, type: WidthType.DXA },
-    borders: NO_TABLE_BORDERS,
-    verticalAlign: VerticalAlign.CENTER,
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [new TextRun({ text: String(number), size: 15, color: GRAY, font: UI_FONT })],
-      }),
-    ],
-  });
-}
-
 function emptyCell(cellWidth) {
   return new TableCell({
     width: { size: cellWidth, type: WidthType.DXA },
@@ -326,8 +312,11 @@ function emptyCell(cellWidth) {
   });
 }
 
-// Line-number column width - narrow, just enough for a 1-2 digit number.
-const LINE_NUM_WIDTH_DXA = 380;
+function chunk(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
 
 function wordGridBlocks(words, role, columns, usableWidth) {
   // One tier for the whole grid (not per-word) so every word - a lone
@@ -341,31 +330,24 @@ function wordGridBlocks(words, role, columns, usableWidth) {
   // shows which category each word belongs to via the small superscript
   // number wordCell() adds per word (see role in that function), and the
   // Results Summary table above still lists every category by name.
-  //
-  // Numbered by line (not by word) - a narrow first column holds one
-  // number per row instead of a number in every cell.
-  const cellWidth = Math.floor((usableWidth - LINE_NUM_WIDTH_DXA) / columns);
+  const cellWidth = Math.floor(usableWidth / columns);
   // Fixed minimum row height so every card is the same size regardless of
   // which word (and therefore which tier) lands in it - generous enough to
   // fit the largest tier's text at the smallest allowed column count (2).
   // The Student copy's text runs bigger (see STUDENT_SIZE_SCALE), so its
   // rows need proportionally more room.
   const rowHeight = { value: role === "student" ? 1250 : 1100, rule: HeightRule.ATLEAST };
-  const rows = chunk(words, columns).map((rowWords, i) => {
+  const rows = chunk(words, columns).map((rowWords) => {
     const cells = rowWords.map((w) => wordCell(w, role, columns, cellWidth, tier));
     while (cells.length < columns) cells.push(emptyCell(cellWidth));
-    return new TableRow({
-      cantSplit: true,
-      height: rowHeight,
-      children: [lineNumberCell(i + 1, LINE_NUM_WIDTH_DXA), ...cells],
-    });
+    return new TableRow({ cantSplit: true, height: rowHeight, children: cells });
   });
 
   const blocks = [
     new Table({
       width: { size: usableWidth, type: WidthType.DXA },
       visuallyRightToLeft: true,
-      columnWidths: [LINE_NUM_WIDTH_DXA, ...Array(columns).fill(cellWidth)],
+      columnWidths: Array(columns).fill(cellWidth),
       rows,
     }),
   ];
