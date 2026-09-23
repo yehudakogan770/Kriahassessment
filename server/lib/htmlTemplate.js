@@ -1,5 +1,6 @@
 const { getFontFaceCss } = require("./fonts");
 const { TEACHER_INSTRUCTIONS } = require("./instructions");
+const { getAlphabetInOrder, getNekudotList } = require("./recitation");
 
 // Hebrew consonant block (includes final forms) - used to size words by
 // their visual letter count while ignoring nikud/te'amim combining marks.
@@ -79,6 +80,38 @@ function renderResultsSummary(summary) {
       <tbody>${generalRows}${categoryRows}</tbody>
     </table>
   </section>`;
+}
+
+// A "by heart" recitation check (the full alphabet in order, or the
+// Nekudot) - a fixed, unshuffled set shown in a plain borderless grid
+// under a gray title bar, styled after the school's own reference
+// assessment format. Teacher-only Notes line; the grid itself is shown to
+// both roles, since the student needs to see the letters/nekudot to
+// recite them.
+function renderRecitationSection(title, symbols, role, columns) {
+  const cells = symbols
+    .map((s) => `<div class="recite-cell">${escapeHtml(s)}</div>`)
+    .join("\n");
+  const notesHtml =
+    role === "teacher"
+      ? `<div class="recite-notes">Notes: <span class="notes-fill"></span></div>`
+      : "";
+  return `
+  <section class="doc-section recite-section">
+    <div class="section-bar">${escapeHtml(title)}</div>
+    <div class="recite-grid" style="grid-template-columns: repeat(${columns}, minmax(0, 1fr));">
+      ${cells}
+    </div>
+    ${notesHtml}
+  </section>`;
+}
+
+function renderLettersRecitation(role) {
+  return renderRecitationSection("Can say the letters by heart, in order", getAlphabetInOrder(), role, 11);
+}
+
+function renderNekudotRecitation(role) {
+  return renderRecitationSection("Recites Nekudot by heart", getNekudotList(), role, 12);
 }
 
 function renderNotesBox() {
@@ -279,6 +312,42 @@ function css() {
     }
     .cat-badge-general { color: #888; font-weight: 400; }
 
+    .recite-section .section-bar {
+      background: #cfcfcf;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-weight: 700;
+      font-size: 9.5pt;
+      padding: 4px 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .recite-grid {
+      direction: rtl;
+      display: grid;
+      border: 1px solid #ccc;
+      border-top: none;
+    }
+    .recite-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32pt;
+      font-size: 18pt;
+      border: 1px solid #ddd;
+    }
+    .recite-notes {
+      font-size: 8pt;
+      color: #555;
+      border: 1px solid #ccc;
+      border-top: none;
+      padding: 3px 8px;
+    }
+    .recite-notes .notes-fill {
+      display: inline-block;
+      width: 70%;
+      border-bottom: 1px dotted #999;
+    }
+
     .word-grid { }
 
     .grid {
@@ -376,6 +445,8 @@ function buildHtml({ role, assembled, meta = {} }) {
   </div>
   ${renderMetaFields(role, meta)}
   ${role === "teacher" ? renderInstructions() : ""}
+  ${meta.includeLettersRecitation ? renderLettersRecitation(role) : ""}
+  ${meta.includeNekudotRecitation ? renderNekudotRecitation(role) : ""}
   ${role === "teacher" ? renderResultsSummary(assembled.summary) : ""}
   ${role === "teacher" ? renderNotesBox() : ""}
   ${renderWordGrid(assembled.words, role, columns)}

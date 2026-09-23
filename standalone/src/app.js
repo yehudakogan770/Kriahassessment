@@ -165,6 +165,8 @@ function updateFavicon(dataUrl) {
     showDate: document.getElementById("show-date"),
     columns: document.getElementById("columns"),
     orientation: document.getElementById("orientation"),
+    includeLettersRecitation: document.getElementById("include-letters-recitation"),
+    includeNekudotRecitation: document.getElementById("include-nekudot-recitation"),
     categoryList: document.getElementById("category-list"),
     selectAll: document.getElementById("select-all"),
     clearAll: document.getElementById("clear-all"),
@@ -577,6 +579,8 @@ function updateFavicon(dataUrl) {
       hideDate: !el.showDate.checked,
       columns: Number(el.columns.value) || 4,
       orientation: el.orientation.value === "landscape" ? "landscape" : "portrait",
+      includeLettersRecitation: el.includeLettersRecitation.checked,
+      includeNekudotRecitation: el.includeNekudotRecitation.checked,
     };
   }
 
@@ -797,6 +801,8 @@ function updateFavicon(dataUrl) {
   [el.title, el.studentName, el.grade, el.date, el.columns].forEach((input) => input.addEventListener("input", updatePreview));
   el.orientation.addEventListener("change", updatePreview);
   el.showDate.addEventListener("change", updatePreview);
+  el.includeLettersRecitation.addEventListener("change", updatePreview);
+  el.includeNekudotRecitation.addEventListener("change", updatePreview);
   document.querySelectorAll('input[name="format"]').forEach((r) =>
     r.addEventListener("change", () => {
       setStatus("");

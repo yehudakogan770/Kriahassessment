@@ -627,6 +627,16 @@ button:focus-visible, .tab:focus-visible, .radio-pill:has(input:focus-visible) {
           </label>
         </div>
         <p class="hint">Tip: more words per row and landscape both help fit an assessment onto one page.</p>
+        <div class="field-row">
+          <label class="field-checkbox">
+            <input id="include-letters-recitation" type="checkbox" />
+            <span>Include "Letters by heart" section</span>
+          </label>
+          <label class="field-checkbox">
+            <input id="include-nekudot-recitation" type="checkbox" />
+            <span>Include "Nekudot by heart" section</span>
+          </label>
+        </div>
       </div>
 
       <div class="card">
@@ -34007,6 +34017,60 @@ const FONT_FACE_CSS = "@font-face {\n  font-family: 'David Libre';\n  font-style
 function getFontFaceCss() { return FONT_FACE_CSS; }
 
 
+// Same Hebrew-alphabetical sort used by the category word-picker (see
+// standalone/src/app.js's compareHebrew) - needed here because a
+// "by heart, in order" check only means something if the letters are
+// actually in alphabet order, not whatever order they appear in the word
+// bank's own source data.
+const HEBREW_LETTER_ORDER = "אבגדהוזחטיכלמנסעפצקרשת";
+const HEBREW_FINAL_TO_REGULAR = { "ך": "כ", "ם": "מ", "ן": "נ", "ף": "פ", "ץ": "צ" };
+
+function hebrewSortKey(word) {
+  const first = word[0] || "";
+  const base = HEBREW_FINAL_TO_REGULAR[first] || first;
+  const primary = HEBREW_LETTER_ORDER.indexOf(base);
+  const isFinal = HEBREW_FINAL_TO_REGULAR[first] ? 1 : 0;
+  const markCode = word.codePointAt(1) || 0;
+  return [primary === -1 ? 999 : primary, isFinal, markCode];
+}
+
+function compareHebrew(a, b) {
+  const ka = hebrewSortKey(a);
+  const kb = hebrewSortKey(b);
+  for (let i = 0; i < ka.length; i++) if (ka[i] !== kb[i]) return ka[i] - kb[i];
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+const LETTERS_CATEGORY_ID = "c01-letters-3x";
+const NEKUDOT_CATEGORY_ID = "c02-nekudot";
+
+/**
+ * The full Hebrew alphabet (including final forms and dagesh/shin-dot
+ * variants), in standard alphabetical order - for a "by heart, in order"
+ * recitation check. Derived from the Letters category's own word list
+ * (deduplicated) rather than a separately maintained list, so it always
+ * matches whatever letters the word bank actually has.
+ */
+function getAlphabetInOrder() {
+  const cat = getCategories().find((c) => c.id === LETTERS_CATEGORY_ID);
+  if (!cat) return [];
+  return [...new Set(cat.words)].sort(compareHebrew);
+}
+
+/**
+ * The distinct Nekudot symbols, in the word bank's own order (deduplicated -
+ * the category repeats each one multiple times for the regular word grid,
+ * which isn't wanted for a "recite each one once" check).
+ */
+function getNekudotList() {
+  const cat = getCategories().find((c) => c.id === NEKUDOT_CATEGORY_ID);
+  if (!cat) return [];
+  return [...new Set(cat.words)];
+}
+
+
+
+
 class InvalidSelectionError extends Error {}
 
 // A short, print-friendly code (avoids 0/O/1/I/L, which are easy to
@@ -34301,6 +34365,38 @@ function renderResultsSummary(summary) {
   </section>`;
 }
 
+// A "by heart" recitation check (the full alphabet in order, or the
+// Nekudot) - a fixed, unshuffled set shown in a plain borderless grid
+// under a gray title bar, styled after the school's own reference
+// assessment format. Teacher-only Notes line; the grid itself is shown to
+// both roles, since the student needs to see the letters/nekudot to
+// recite them.
+function renderRecitationSection(title, symbols, role, columns) {
+  const cells = symbols
+    .map((s) => `<div class="recite-cell">${escapeHtml(s)}</div>`)
+    .join("\n");
+  const notesHtml =
+    role === "teacher"
+      ? `<div class="recite-notes">Notes: <span class="notes-fill"></span></div>`
+      : "";
+  return `
+  <section class="doc-section recite-section">
+    <div class="section-bar">${escapeHtml(title)}</div>
+    <div class="recite-grid" style="grid-template-columns: repeat(${columns}, minmax(0, 1fr));">
+      ${cells}
+    </div>
+    ${notesHtml}
+  </section>`;
+}
+
+function renderLettersRecitation(role) {
+  return renderRecitationSection("Can say the letters by heart, in order", getAlphabetInOrder(), role, 11);
+}
+
+function renderNekudotRecitation(role) {
+  return renderRecitationSection("Recites Nekudot by heart", getNekudotList(), role, 12);
+}
+
 function renderNotesBox() {
   return `
   <section class="doc-section notes-box" dir="ltr">
@@ -34499,6 +34595,42 @@ function css() {
     }
     .cat-badge-general { color: #888; font-weight: 400; }
 
+    .recite-section .section-bar {
+      background: #cfcfcf;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-weight: 700;
+      font-size: 9.5pt;
+      padding: 4px 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .recite-grid {
+      direction: rtl;
+      display: grid;
+      border: 1px solid #ccc;
+      border-top: none;
+    }
+    .recite-cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 32pt;
+      font-size: 18pt;
+      border: 1px solid #ddd;
+    }
+    .recite-notes {
+      font-size: 8pt;
+      color: #555;
+      border: 1px solid #ccc;
+      border-top: none;
+      padding: 3px 8px;
+    }
+    .recite-notes .notes-fill {
+      display: inline-block;
+      width: 70%;
+      border-bottom: 1px dotted #999;
+    }
+
     .word-grid { }
 
     .grid {
@@ -34596,6 +34728,8 @@ function buildHtml({ role, assembled, meta = {} }) {
   </div>
   ${renderMetaFields(role, meta)}
   ${role === "teacher" ? renderInstructions() : ""}
+  ${meta.includeLettersRecitation ? renderLettersRecitation(role) : ""}
+  ${meta.includeNekudotRecitation ? renderNekudotRecitation(role) : ""}
   ${role === "teacher" ? renderResultsSummary(assembled.summary) : ""}
   ${role === "teacher" ? renderNotesBox() : ""}
   ${renderWordGrid(assembled.words, role, columns)}
@@ -34622,6 +34756,7 @@ const {
   PageNumber,
   PageOrientation,
   HeightRule,
+  ShadingType,
   convertInchesToTwip,
 } = docx;
 
@@ -34655,6 +34790,9 @@ const GRID_CELL_BORDERS = {
   right: CELL_BORDER,
 };
 const RULE_BORDER = { style: BorderStyle.SINGLE, size: 8, color: "333333" };
+const LIGHT_BORDER = { style: BorderStyle.SINGLE, size: 2, color: "CCCCCC" };
+const LIGHT_GRID = { top: LIGHT_BORDER, bottom: LIGHT_BORDER, left: LIGHT_BORDER, right: LIGHT_BORDER };
+const BAR_SHADING = "CFCFCF";
 
 // Base half-point (docx `size` unit) font sizes per word-length tier, tuned
 // for a 3-column grid; scaledTierSize() adjusts for the actual column count.
@@ -34859,6 +34997,77 @@ function resultsSummaryTable(summary, usableWidth) {
   return [heading, table];
 }
 
+/** A gray title bar spanning the full width - used to label a recitation
+ * section, styled after the school's own reference assessment format
+ * rather than the plain heading+rule used elsewhere in this document. */
+function recitationBar(title, usableWidth) {
+  return new Table({
+    width: { size: usableWidth, type: WidthType.DXA },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: usableWidth, type: WidthType.DXA },
+            borders: NO_TABLE_BORDERS,
+            shading: { type: ShadingType.CLEAR, fill: BAR_SHADING },
+            margins: { top: 40, bottom: 40, left: 80, right: 80 },
+            children: [
+              new Paragraph({
+                children: [new TextRun({ text: title.toUpperCase(), bold: true, size: 19, font: UI_FONT })],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/** A "by heart" recitation check (the full alphabet in order, or the
+ * Nekudot) - a fixed, unshuffled set shown in a plain lightly-bordered
+ * grid under a gray title bar. Teacher-only Notes line; the grid itself
+ * is shown to both roles, since the student needs to see the
+ * letters/nekudot to recite them. */
+function recitationBlock(title, symbols, role, columns, usableWidth) {
+  const cellWidth = Math.floor(usableWidth / columns);
+  const rows = chunk(symbols, columns).map((rowSymbols) => {
+    const cells = rowSymbols.map(
+      (s) =>
+        new TableCell({
+          width: { size: cellWidth, type: WidthType.DXA },
+          borders: LIGHT_GRID,
+          verticalAlign: VerticalAlign.CENTER,
+          children: [
+            new Paragraph({ alignment: AlignmentType.CENTER, bidirectional: true, children: [new TextRun({ text: s, size: 36, font: FONT })] }),
+          ],
+        })
+    );
+    while (cells.length < columns) cells.push(emptyCell(cellWidth));
+    return new TableRow({ children: cells });
+  });
+
+  const blocks = [
+    recitationBar(title, usableWidth),
+    new Table({
+      width: { size: usableWidth, type: WidthType.DXA },
+      columnWidths: Array(columns).fill(cellWidth),
+      rows,
+    }),
+  ];
+
+  if (role === "teacher") {
+    blocks.push(
+      new Paragraph({
+        border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "999999" } },
+        spacing: { after: 120 },
+        children: [new TextRun({ text: "Notes: ", size: 16, color: GRAY, font: UI_FONT })],
+      })
+    );
+  }
+
+  return blocks;
+}
+
 function notesBoxBlock() {
   const heading = sectionHeading("Notes");
 
@@ -34991,6 +35200,14 @@ async function renderDocx({ role, assembled, meta = {} }) {
 
   if (role === "teacher") {
     children.push(...instructionsBlock());
+  }
+  if (meta.includeLettersRecitation) {
+    children.push(...recitationBlock("Can say the letters by heart, in order", getAlphabetInOrder(), role, 11, usableWidth));
+  }
+  if (meta.includeNekudotRecitation) {
+    children.push(...recitationBlock("Recites Nekudot by heart", getNekudotList(), role, 12, usableWidth));
+  }
+  if (role === "teacher") {
     children.push(...resultsSummaryTable(assembled.summary, usableWidth));
     children.push(...notesBoxBlock());
   }
@@ -35198,6 +35415,8 @@ function updateFavicon(dataUrl) {
     showDate: document.getElementById("show-date"),
     columns: document.getElementById("columns"),
     orientation: document.getElementById("orientation"),
+    includeLettersRecitation: document.getElementById("include-letters-recitation"),
+    includeNekudotRecitation: document.getElementById("include-nekudot-recitation"),
     categoryList: document.getElementById("category-list"),
     selectAll: document.getElementById("select-all"),
     clearAll: document.getElementById("clear-all"),
@@ -35610,6 +35829,8 @@ function updateFavicon(dataUrl) {
       hideDate: !el.showDate.checked,
       columns: Number(el.columns.value) || 4,
       orientation: el.orientation.value === "landscape" ? "landscape" : "portrait",
+      includeLettersRecitation: el.includeLettersRecitation.checked,
+      includeNekudotRecitation: el.includeNekudotRecitation.checked,
     };
   }
 
@@ -35830,6 +36051,8 @@ function updateFavicon(dataUrl) {
   [el.title, el.studentName, el.grade, el.date, el.columns].forEach((input) => input.addEventListener("input", updatePreview));
   el.orientation.addEventListener("change", updatePreview);
   el.showDate.addEventListener("change", updatePreview);
+  el.includeLettersRecitation.addEventListener("change", updatePreview);
+  el.includeNekudotRecitation.addEventListener("change", updatePreview);
   document.querySelectorAll('input[name="format"]').forEach((r) =>
     r.addEventListener("change", () => {
       setStatus("");

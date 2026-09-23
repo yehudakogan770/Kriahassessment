@@ -77,6 +77,7 @@ function buildAppScript() {
 
   const instructions = stripNodeWrapper(read("server/lib/instructions.js"));
   const xlsxConvert = stripNodeWrapper(read("server/lib/xlsxConvert.js"));
+  const recitation = stripNodeWrapper(read("server/lib/recitation.js"));
   const assemble = stripNodeWrapper(read("server/lib/assemble.js"));
   const htmlTemplate = stripNodeWrapper(read("server/lib/htmlTemplate.js"));
 
@@ -111,6 +112,8 @@ ${xlsxConvert}
 
 const FONT_FACE_CSS = ${JSON.stringify(fontFaceCss)};
 function getFontFaceCss() { return FONT_FACE_CSS; }
+
+${recitation}
 
 ${assemble}
 

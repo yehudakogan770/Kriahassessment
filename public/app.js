@@ -49,6 +49,8 @@
     showDate: document.getElementById("show-date"),
     columns: document.getElementById("columns"),
     orientation: document.getElementById("orientation"),
+    includeLettersRecitation: document.getElementById("include-letters-recitation"),
+    includeNekudotRecitation: document.getElementById("include-nekudot-recitation"),
     categoryList: document.getElementById("category-list"),
     selectAll: document.getElementById("select-all"),
     clearAll: document.getElementById("clear-all"),
@@ -246,6 +248,8 @@
       hideDate: !el.showDate.checked,
       columns: Number(el.columns.value) || 3,
       orientation: el.orientation.value === "landscape" ? "landscape" : "portrait",
+      includeLettersRecitation: el.includeLettersRecitation.checked,
+      includeNekudotRecitation: el.includeNekudotRecitation.checked,
     };
   }
 
@@ -428,6 +432,8 @@
   );
   el.orientation.addEventListener("change", schedulePreviewUpdate);
   el.showDate.addEventListener("change", schedulePreviewUpdate);
+  el.includeLettersRecitation.addEventListener("change", schedulePreviewUpdate);
+  el.includeNekudotRecitation.addEventListener("change", schedulePreviewUpdate);
   document.querySelectorAll('input[name="format"]').forEach((r) =>
     r.addEventListener("change", () => setStatus(""))
   );
