@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "standalone/kriah-assessment-builder.html"
+      - "CNAME"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
 
@@ -30,6 +31,7 @@ jobs:
         run: |
           mkdir -p _site
           cp standalone/kriah-assessment-builder.html _site/index.html
+          cp CNAME _site/CNAME
 
       - uses: actions/configure-pages@v5
         with:
