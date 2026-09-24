@@ -52,9 +52,9 @@ function escapeLiteralReplacementChar(source) {
 }
 
 function buildDefaultLogoDataUrl() {
-  const logoPath = path.join(ROOT, "server", "assets", "branding", "ganeinu-academy-logo.jpg");
+  const logoPath = path.join(ROOT, "server", "assets", "branding", "ganeinu-academy-logo.png");
   const base64 = fs.readFileSync(logoPath).toString("base64");
-  return `data:image/jpeg;base64,${base64}`;
+  return `data:image/png;base64,${base64}`;
 }
 
 function buildFontFaceCss() {
