@@ -60,6 +60,7 @@ body {
   margin-bottom: 8px;
 }
 .card-header-row h2 { margin: 0; }
+.page-count { font-size: 12px; font-weight: 400; color: var(--muted); }
 
 .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #333; margin-bottom: 10px; }
 .field span { font-weight: 600; }

@@ -71,6 +71,7 @@
     previewFrameWrap: document.querySelector(".preview-frame-wrap"),
     previewPage: document.getElementById("preview-page"),
     previewPlaceholder: document.getElementById("preview-placeholder"),
+    pageCount: document.getElementById("page-count"),
     tabs: Array.from(document.querySelectorAll(".preview-tabs .tab")),
   };
 
@@ -320,6 +321,7 @@
       el.previewFrame.hidden = true;
       el.previewPlaceholder.hidden = false;
       el.previewPlaceholder.textContent = "Select one or more categories to see a preview.";
+      el.pageCount.textContent = "";
       return;
     }
 
@@ -352,6 +354,7 @@
       el.previewFrame.hidden = true;
       el.previewPlaceholder.hidden = false;
       el.previewPlaceholder.textContent = err.message || "Could not build preview.";
+      el.pageCount.textContent = "";
     }
   }
 
@@ -370,6 +373,66 @@
   // PDF viewer's "fit to page" zoom. `.preview-frame-wrap` centers it
   // (flex + justify-content:center), and the default scale transform-
   // origin (center) keeps that centering intact as it shrinks.
+  // Usable content height for one printed page, in CSS px at 96dpi - the
+  // real PDF page (11in) minus its print margins (0.3in top + 0.4in
+  // bottom, see pdfBuilder.js) minus this document's own body padding
+  // (0.35in top, see htmlTemplate.js's css()). Slightly conservative on
+  // purpose (a hair less than the true value), since under-counting how
+  // much fits on a page is a worse surprise for a teacher planning a
+  // print job than over-counting by a few px.
+  const PAGE_CONTENT_HEIGHT_PX = 945;
+
+  // The live preview is one continuous HTML document with no real notion
+  // of "page 2" - only an actual print/PDF pass ever slices it into pages.
+  // This estimates where those slices will fall (by measuring the actual
+  // rendered row height of the word grid, the same way a real print engine
+  // would keep each row intact rather than splitting a card in half) and
+  // marks them directly in the preview, so a teacher can see how many
+  // pages this will actually print as before generating anything. Purely
+  // a preview aid - buildHtml()'s own output never includes these.
+  function insertPageBreakMarkers(doc) {
+    doc.querySelectorAll(".page-break-marker").forEach((node) => node.remove());
+
+    const grid = doc.querySelector(".word-grid .grid");
+    if (!grid) return 1;
+    const cells = [...grid.children].filter((el) => el.classList.contains("cell"));
+    if (cells.length === 0) return 1;
+
+    const rowHeight = cells[0].getBoundingClientRect().height;
+    const columns = getComputedStyle(grid).gridTemplateColumns.split(" ").length;
+    const totalRows = Math.ceil(cells.length / columns);
+    // Everything before the grid (header, meta fields, instructions,
+    // recitation sections, results summary, notes) only ever appears once,
+    // at the top of page 1 - measuring it directly (rather than assuming a
+    // fixed size) keeps this accurate as those sections grow or shrink.
+    const headerHeight = grid.getBoundingClientRect().top - doc.body.getBoundingClientRect().top;
+
+    let pages = 1;
+    let usedOnPage = headerHeight;
+    let rowsOnPage = 0;
+    const breakBeforeRow = [];
+    for (let row = 0; row < totalRows; row++) {
+      if (usedOnPage + rowHeight > PAGE_CONTENT_HEIGHT_PX && rowsOnPage > 0) {
+        pages += 1;
+        usedOnPage = 0;
+        rowsOnPage = 0;
+        breakBeforeRow.push(row);
+      }
+      usedOnPage += rowHeight;
+      rowsOnPage += 1;
+    }
+
+    for (let i = breakBeforeRow.length - 1; i >= 0; i--) {
+      const row = breakBeforeRow[i];
+      const marker = doc.createElement("div");
+      marker.className = "page-break-marker";
+      marker.textContent = `Page ${i + 2} starts here`;
+      grid.insertBefore(marker, cells[row * columns]);
+    }
+
+    return pages;
+  }
+
   function fitPreviewToPage() {
     const doc = el.previewFrame.contentDocument;
     if (!doc || !doc.documentElement) return;
@@ -378,6 +441,8 @@
     el.previewFrame.style.transform = "none";
     el.previewFrame.style.width = nativeW + "px";
     el.previewFrame.style.height = "10px"; // shrink first so it can't inflate the wrap's own size
+    const pageCount = insertPageBreakMarkers(doc);
+    el.pageCount.textContent = pageCount === 1 ? "(1 page)" : `(${pageCount} pages)`;
     const nativeH = Math.max(doc.documentElement.scrollHeight, 100);
     el.previewFrame.style.height = nativeH + "px";
 

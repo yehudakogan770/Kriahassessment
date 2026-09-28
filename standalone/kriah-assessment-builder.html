@@ -704,7 +704,7 @@ button:focus-visible, .tab:focus-visible, .radio-pill:has(input:focus-visible) {
     <section class="panel preview-panel">
       <div class="card preview-card">
         <div class="card-header-row">
-          <h2>Live Preview</h2>
+          <h2>Live Preview <span id="page-count" class="page-count"></span></h2>
           <div class="preview-tabs" role="tablist" aria-label="Preview role">
             <button type="button" class="tab active" data-role="teacher" role="tab" aria-selected="true">Teacher</button>
             <button type="button" class="tab" data-role="student" role="tab" aria-selected="false">Student</button>
@@ -34687,6 +34687,26 @@ function css() {
       gap: 3px;
       margin-bottom: 2px;
     }
+    /* Preview-only: inserted by the app's live-preview JS (never present in
+       an actual PDF/docx download) to show where a printed page will
+       actually break, since this HTML itself has no page concept. */
+    .page-break-marker {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #b3261e;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .page-break-marker::before, .page-break-marker::after {
+      content: "";
+      flex: 1;
+      border-top: 1.5pt dashed #b3261e;
+    }
     .cell {
       container-type: inline-size;
       position: relative;
@@ -35501,6 +35521,7 @@ function updateFavicon(dataUrl) {
     previewPage: document.getElementById("preview-page"),
     previewDesk: document.querySelector(".preview-desk"),
     previewPlaceholder: document.getElementById("preview-placeholder"),
+    pageCount: document.getElementById("page-count"),
     printFrame: document.getElementById("print-frame"),
     headerMeta: document.getElementById("header-meta"),
     tabs: Array.from(document.querySelectorAll(".preview-tabs .tab")),
@@ -35980,6 +36001,66 @@ function updateFavicon(dataUrl) {
   // actually comes out, then shrinks the whole thing down with a CSS
   // transform to fit whatever room `.preview-desk` actually has - the same
   // idea as a PDF viewer's "fit to page" zoom.
+  // Usable content height for one printed page, in CSS px at 96dpi - the
+  // real PDF page (11in) minus its print margins (0.3in top + 0.4in
+  // bottom, see pdfBuilder.js) minus this document's own body padding
+  // (0.35in top, see htmlTemplate.js's css()). Slightly conservative on
+  // purpose (a hair less than the true value), since under-counting how
+  // much fits on a page is a worse surprise for a teacher planning a
+  // print job than over-counting by a few px.
+  const PAGE_CONTENT_HEIGHT_PX = 945;
+
+  // The live preview is one continuous HTML document with no real notion
+  // of "page 2" - only an actual print/PDF pass ever slices it into pages.
+  // This estimates where those slices will fall (by measuring the actual
+  // rendered row height of the word grid, the same way a real print engine
+  // would keep each row intact rather than splitting a card in half) and
+  // marks them directly in the preview, so a teacher can see how many
+  // pages this will actually print as before generating anything. Purely
+  // a preview aid - buildHtml()'s own output never includes these.
+  function insertPageBreakMarkers(doc) {
+    doc.querySelectorAll(".page-break-marker").forEach((node) => node.remove());
+
+    const grid = doc.querySelector(".word-grid .grid");
+    if (!grid) return 1;
+    const cells = [...grid.children].filter((el) => el.classList.contains("cell"));
+    if (cells.length === 0) return 1;
+
+    const rowHeight = cells[0].getBoundingClientRect().height;
+    const columns = getComputedStyle(grid).gridTemplateColumns.split(" ").length;
+    const totalRows = Math.ceil(cells.length / columns);
+    // Everything before the grid (header, meta fields, instructions,
+    // recitation sections, results summary, notes) only ever appears once,
+    // at the top of page 1 - measuring it directly (rather than assuming a
+    // fixed size) keeps this accurate as those sections grow or shrink.
+    const headerHeight = grid.getBoundingClientRect().top - doc.body.getBoundingClientRect().top;
+
+    let pages = 1;
+    let usedOnPage = headerHeight;
+    let rowsOnPage = 0;
+    const breakBeforeRow = [];
+    for (let row = 0; row < totalRows; row++) {
+      if (usedOnPage + rowHeight > PAGE_CONTENT_HEIGHT_PX && rowsOnPage > 0) {
+        pages += 1;
+        usedOnPage = 0;
+        rowsOnPage = 0;
+        breakBeforeRow.push(row);
+      }
+      usedOnPage += rowHeight;
+      rowsOnPage += 1;
+    }
+
+    for (let i = breakBeforeRow.length - 1; i >= 0; i--) {
+      const row = breakBeforeRow[i];
+      const marker = doc.createElement("div");
+      marker.className = "page-break-marker";
+      marker.textContent = `Page ${i + 2} starts here`;
+      grid.insertBefore(marker, cells[row * columns]);
+    }
+
+    return pages;
+  }
+
   function fitPreviewToPage() {
     const doc = el.previewFrame.contentDocument;
     if (!doc || !doc.documentElement) return;
@@ -35988,6 +36069,8 @@ function updateFavicon(dataUrl) {
     el.previewFrame.style.transform = "none";
     el.previewFrame.style.width = nativeW + "px";
     el.previewFrame.style.height = "10px"; // shrink first so it can't inflate the desk's own scrollHeight
+    const pageCount = insertPageBreakMarkers(doc);
+    el.pageCount.textContent = pageCount === 1 ? "(1 page)" : `(${pageCount} pages)`;
     const nativeH = Math.max(doc.documentElement.scrollHeight, 100);
     el.previewFrame.style.height = nativeH + "px";
 
@@ -36016,6 +36099,7 @@ function updateFavicon(dataUrl) {
       el.previewFrame.hidden = true;
       el.previewPlaceholder.hidden = false;
       el.previewPlaceholder.textContent = "Select one or more categories to see a preview.";
+      el.pageCount.textContent = "";
       return;
     }
 
@@ -36031,6 +36115,7 @@ function updateFavicon(dataUrl) {
       el.previewFrame.hidden = true;
       el.previewPlaceholder.hidden = false;
       el.previewPlaceholder.textContent = err.message || "Could not build preview.";
+      el.pageCount.textContent = "";
     }
   }
 
