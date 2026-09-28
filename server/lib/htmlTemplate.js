@@ -354,6 +354,26 @@ function css() {
       gap: 3px;
       margin-bottom: 2px;
     }
+    /* Preview-only: inserted by the app's live-preview JS (never present in
+       an actual PDF/docx download) to show where a printed page will
+       actually break, since this HTML itself has no page concept. */
+    .page-break-marker {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      font-size: 7.5pt;
+      color: #b3261e;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .page-break-marker::before, .page-break-marker::after {
+      content: "";
+      flex: 1;
+      border-top: 1.5pt dashed #b3261e;
+    }
     .cell {
       container-type: inline-size;
       position: relative;
