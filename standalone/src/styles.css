@@ -328,6 +328,17 @@ button:focus-visible, .tab:focus-visible, .radio-pill:has(input:focus-visible) {
   font-variant-numeric: tabular-nums;
 }
 .cat-group-body { border-top: 1px solid var(--border-soft); }
+.g2-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border-soft);
+  cursor: pointer;
+  background: var(--surface);
+}
 
 .category-row {
   display: flex;

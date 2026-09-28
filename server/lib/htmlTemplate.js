@@ -85,33 +85,29 @@ function renderResultsSummary(summary) {
 // A "by heart" recitation check (the full alphabet in order, or the
 // Nekudot) - a fixed, unshuffled set shown in a plain borderless grid
 // under a gray title bar, styled after the school's own reference
-// assessment format. Teacher-only Notes line; the grid itself is shown to
-// both roles, since the student needs to see the letters/nekudot to
-// recite them.
-function renderRecitationSection(title, symbols, role, columns) {
+// assessment format. Teacher copy only - this is the teacher's own oral
+// checklist for a spoken recitation, not something the student reads off
+// their own page.
+function renderRecitationSection(title, symbols, columns) {
   const cells = symbols
     .map((s) => `<div class="recite-cell">${escapeHtml(s)}</div>`)
     .join("\n");
-  const notesHtml =
-    role === "teacher"
-      ? `<div class="recite-notes">Notes: <span class="notes-fill"></span></div>`
-      : "";
   return `
   <section class="doc-section recite-section">
     <div class="section-bar">${escapeHtml(title)}</div>
     <div class="recite-grid" style="grid-template-columns: repeat(${columns}, minmax(0, 1fr));">
       ${cells}
     </div>
-    ${notesHtml}
+    <div class="recite-notes">Notes: <span class="notes-fill"></span></div>
   </section>`;
 }
 
-function renderLettersRecitation(role) {
-  return renderRecitationSection("Can say the letters by heart, in order", getAlphabetInOrder(), role, 11);
+function renderLettersRecitation() {
+  return renderRecitationSection("Can say the letters by heart, in order", getAlphabetInOrder(), 11);
 }
 
-function renderNekudotRecitation(role) {
-  return renderRecitationSection("Recites Nekudot by heart", getNekudotList(), role, 12);
+function renderNekudotRecitation() {
+  return renderRecitationSection("Recites Nekudot by heart", getNekudotList(), 12);
 }
 
 function renderNotesBox() {
@@ -280,10 +276,13 @@ function css() {
     }
     .instructions ol {
       margin: 0;
-      padding-inline-start: 18px;
-      font-size: 8.5pt;
-      line-height: 1.35;
+      padding-inline-start: 15px;
+      font-size: 7pt;
+      line-height: 1.3;
+      column-count: 2;
+      column-gap: 16px;
     }
+    .instructions li { break-inside: avoid; margin-bottom: 1px; }
 
     .results-summary table {
       width: 100%;
@@ -445,8 +444,8 @@ function buildHtml({ role, assembled, meta = {} }) {
   </div>
   ${renderMetaFields(role, meta)}
   ${role === "teacher" ? renderInstructions() : ""}
-  ${meta.includeLettersRecitation ? renderLettersRecitation(role) : ""}
-  ${meta.includeNekudotRecitation ? renderNekudotRecitation(role) : ""}
+  ${role === "teacher" && meta.includeLettersRecitation ? renderLettersRecitation() : ""}
+  ${role === "teacher" && meta.includeNekudotRecitation ? renderNekudotRecitation() : ""}
   ${role === "teacher" ? renderResultsSummary(assembled.summary) : ""}
   ${role === "teacher" ? renderNotesBox() : ""}
   ${renderWordGrid(assembled.words, role, columns)}

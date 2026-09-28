@@ -1,7 +1,7 @@
 {
   "title": "Ganeinu Academy - Kriah Reading Assessment",
   "sourceSheet": "Copy of Kriah Assessment",
-  "generatedAt": "2026-08-14T01:06:27.295Z",
+  "generatedAt": "2026-09-28T17:16:34.588Z",
   "categoryCount": 30,
   "categories": [
     {
@@ -333,9 +333,9 @@
       ]
     },
     {
-      "id": "c19-confusing-dagesh-shared-nekudah-dot-shin-sin",
+      "id": "c19-double-dotted-shin-sin-shared-dot",
       "order": 19,
-      "name": "Confusing Dagesh Shared Nekudah dot. Shin /Sin",
+      "name": "Double dotted Shin /Sin Shared dot.",
       "count": 3,
       "words": [
         "נְפָשֹׁת",
@@ -355,9 +355,9 @@
       ]
     },
     {
-      "id": "c21-shared-dot",
+      "id": "c21-shared-shin-sin-dot",
       "order": 21,
-      "name": "Shared Dot",
+      "name": "Shared Shin Sin Dot",
       "count": 3,
       "words": [
         "יַעְשׂר",

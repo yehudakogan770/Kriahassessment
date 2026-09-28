@@ -174,20 +174,40 @@ function sectionHeading(text) {
   });
 }
 
-function instructionsBlock() {
+function instructionsBlock(usableWidth) {
   const heading = sectionHeading("Teacher Testing Instructions");
 
-  const items = TEACHER_INSTRUCTIONS.map(
-    (line, i) =>
-      new Paragraph({
-        alignment: AlignmentType.LEFT,
-        indent: { left: 100 },
-        spacing: { after: i === TEACHER_INSTRUCTIONS.length - 1 ? 100 : 20 },
-        children: [new TextRun({ text: `${i + 1}. ${line}`, size: 16, font: UI_FONT })],
-      })
-  );
+  const item = (line, i) =>
+    new Paragraph({
+      alignment: AlignmentType.LEFT,
+      indent: { left: 90 },
+      spacing: { after: 20 },
+      children: [new TextRun({ text: `${i + 1}. ${line}`, size: 13, font: UI_FONT })],
+    });
 
-  return [heading, ...items];
+  // Two columns (first column gets the extra item on an odd count) instead
+  // of one long vertical list, so this takes a lot less page height - the
+  // same idea as CSS column-count in htmlTemplate.js's version.
+  const splitAt = Math.ceil(TEACHER_INSTRUCTIONS.length / 2);
+  const leftItems = TEACHER_INSTRUCTIONS.slice(0, splitAt).map(item);
+  const rightItems = TEACHER_INSTRUCTIONS.slice(splitAt).map((line, i) => item(line, i + splitAt));
+
+  const colWidth = Math.floor(usableWidth / 2);
+  const table = new Table({
+    width: { size: usableWidth, type: WidthType.DXA },
+    columnWidths: [colWidth, colWidth],
+    borders: NO_TABLE_BORDERS,
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({ width: { size: colWidth, type: WidthType.DXA }, borders: NO_TABLE_BORDERS, children: leftItems }),
+          new TableCell({ width: { size: colWidth, type: WidthType.DXA }, borders: NO_TABLE_BORDERS, children: rightItems }),
+        ],
+      }),
+    ],
+  });
+
+  return [heading, table];
 }
 
 function resultsSummaryTable(summary, usableWidth) {
@@ -287,10 +307,9 @@ function recitationBar(title, usableWidth) {
 
 /** A "by heart" recitation check (the full alphabet in order, or the
  * Nekudot) - a fixed, unshuffled set shown in a plain lightly-bordered
- * grid under a gray title bar. Teacher-only Notes line; the grid itself
- * is shown to both roles, since the student needs to see the
- * letters/nekudot to recite them. */
-function recitationBlock(title, symbols, role, columns, usableWidth) {
+ * grid under a gray title bar. Teacher copy only - the caller only
+ * includes this for role === "teacher" (see renderDocx). */
+function recitationBlock(title, symbols, columns, usableWidth) {
   const cellWidth = Math.floor(usableWidth / columns);
   const rows = chunk(symbols, columns).map((rowSymbols) => {
     const cells = rowSymbols.map(
@@ -317,15 +336,13 @@ function recitationBlock(title, symbols, role, columns, usableWidth) {
     }),
   ];
 
-  if (role === "teacher") {
-    blocks.push(
-      new Paragraph({
-        border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "999999" } },
-        spacing: { after: 120 },
-        children: [new TextRun({ text: "Notes: ", size: 16, color: GRAY, font: UI_FONT })],
-      })
-    );
-  }
+  blocks.push(
+    new Paragraph({
+      border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "999999" } },
+      spacing: { after: 120 },
+      children: [new TextRun({ text: "Notes: ", size: 16, color: GRAY, font: UI_FONT })],
+    })
+  );
 
   return blocks;
 }
@@ -461,15 +478,13 @@ async function renderDocx({ role, assembled, meta = {} }) {
   ];
 
   if (role === "teacher") {
-    children.push(...instructionsBlock());
-  }
-  if (meta.includeLettersRecitation) {
-    children.push(...recitationBlock("Can say the letters by heart, in order", getAlphabetInOrder(), role, 11, usableWidth));
-  }
-  if (meta.includeNekudotRecitation) {
-    children.push(...recitationBlock("Recites Nekudot by heart", getNekudotList(), role, 12, usableWidth));
-  }
-  if (role === "teacher") {
+    children.push(...instructionsBlock(usableWidth));
+    if (meta.includeLettersRecitation) {
+      children.push(...recitationBlock("Can say the letters by heart, in order", getAlphabetInOrder(), 11, usableWidth));
+    }
+    if (meta.includeNekudotRecitation) {
+      children.push(...recitationBlock("Recites Nekudot by heart", getNekudotList(), 12, usableWidth));
+    }
     children.push(...resultsSummaryTable(assembled.summary, usableWidth));
     children.push(...notesBoxBlock());
   }
