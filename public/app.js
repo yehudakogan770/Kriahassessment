@@ -28,9 +28,9 @@
     "c16-g2-sheva-under-twin-letters": "Sheva Rules",
     "c17-shuruk-in-beginning": "Exception Rules",
     "c18-confusing-dagesh-vav-vs-shuruk": "Exception Rules",
-    "c19-confusing-dagesh-shared-nekudah-dot-shin-sin": "Exception Rules",
+    "c19-double-dotted-shin-sin-shared-dot": "Exception Rules",
     "c20-confusing-dagesh-vav-vs-cholam-g2": "Exception Rules",
-    "c21-shared-dot": "Exception Rules",
+    "c21-shared-shin-sin-dot": "Exception Rules",
     "c22-kamatz-yud-ending": "Exception Rules",
     "c23-patach-yud-ending": "Exception Rules",
     "c24-silent-letter-and-yud-endings-g2": "Exception Rules",
@@ -40,6 +40,16 @@
     "c28-mapik-hey-hey-endings-g2": "Exception Rules",
     "c30-cholam-yud-ending-g2": "Exception Rules",
   };
+
+  // Categories whose name marks them as a Grade 2 rule - offered as a
+  // per-group show/hide toggle (see renderCategoryList) in the two groups
+  // that actually have any, so a teacher testing an earlier grade can
+  // declutter the list instead of scrolling past rules that don't apply.
+  const G2_RE = /\bg2\b/i;
+  function isG2Category(cat) {
+    return G2_RE.test(cat.name);
+  }
+  const G2_TOGGLE_GROUPS = new Set(["Exception Rules", "Sheva Rules"]);
 
   const el = {
     title: document.getElementById("doc-title"),
@@ -107,6 +117,7 @@
     const row = document.createElement("label");
     row.className = "category-row";
     row.dataset.id = cat.id;
+    row.dataset.g2 = isG2Category(cat) ? "1" : "0";
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
@@ -140,6 +151,27 @@
 
     row.append(checkbox, name, count, repeat, badge);
     return row;
+  }
+
+  function buildG2ToggleRow(body) {
+    const toggleRow = document.createElement("label");
+    toggleRow.className = "g2-toggle-row";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = true;
+    checkbox.addEventListener("change", () => {
+      for (const row of body.querySelectorAll('[data-g2="1"]')) {
+        row.hidden = !checkbox.checked;
+        if (row.hidden && row.querySelector("input[type=checkbox]").checked) {
+          row.querySelector("input[type=checkbox]").checked = false;
+          onSelectionChanged();
+        }
+      }
+    });
+
+    toggleRow.append(checkbox, document.createTextNode(" Show Grade 2 rules"));
+    return toggleRow;
   }
 
   function renderCategoryList() {
@@ -185,6 +217,9 @@
 
       const body = document.createElement("div");
       body.className = "cat-group-body";
+      if (G2_TOGGLE_GROUPS.has(groupName) && cats.some(isG2Category)) {
+        body.appendChild(buildG2ToggleRow(body));
+      }
       for (const cat of cats) body.appendChild(buildCategoryRow(cat));
       details.appendChild(body);
 
@@ -193,7 +228,11 @@
   }
 
   function getSelectedCategoryIds() {
-    return Array.from(el.categoryList.querySelectorAll("input[type=checkbox]:checked")).map(
+    // Scoped to .category-row specifically (not just any checkbox in the
+    // list) so the per-group "Show Grade 2 rules" toggle - a checkbox with
+    // no category id of its own, just a display filter - never gets
+    // treated as a selected category.
+    return Array.from(el.categoryList.querySelectorAll(".category-row input[type=checkbox]:checked")).map(
       (cb) => cb.value
     );
   }
@@ -418,11 +457,11 @@
 
   el.categoryList.addEventListener("change", onSelectionChanged);
   el.selectAll.addEventListener("click", () => {
-    el.categoryList.querySelectorAll("input[type=checkbox]").forEach((cb) => (cb.checked = true));
+    el.categoryList.querySelectorAll(".category-row input[type=checkbox]").forEach((cb) => (cb.checked = true));
     onSelectionChanged();
   });
   el.clearAll.addEventListener("click", () => {
-    el.categoryList.querySelectorAll("input[type=checkbox]").forEach((cb) => (cb.checked = false));
+    el.categoryList.querySelectorAll(".category-row input[type=checkbox]").forEach((cb) => (cb.checked = false));
     onSelectionChanged();
   });
   el.downloadTeacher.addEventListener("click", () => download("teacher"));
