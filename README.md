@@ -2,6 +2,12 @@
 
 **Live: https://yehudakogan770.github.io/Kriahassessment/**
 
+A custom domain (`ganeinuacademy.org`, via the `CNAME` file in this repo) is
+wired up on the GitHub Pages side, but as of this writing the domain itself
+redirects to the school's Instagram page instead of here - the registrar-side
+DNS doesn't point at GitHub Pages (yet, or anymore). See "WHERE EVERYTHING
+LIVES" in `HANDOFF.md` for the full status and what to check.
+
 A website for building Hebrew reading (kriah) assessment sheets from the
 Ganeinu Academy word bank. Pick which skill categories to test, and generate
 matching **Teacher** and **Student** documents as PDF or Word.
@@ -24,27 +30,53 @@ teacher/student rules) - see "How it's built" below.
 
 ## What it does
 
-- The word bank (28 categories - letters, nekudot, sheva rules, silent
+- The word bank (30 categories - letters, nekudot, sheva rules, silent
   letters, dagesh confusions, etc.) is loaded from `data/categories.json`,
   generated from the source spreadsheet in `data/source/`.
 - Pick any subset of categories in the web UI; a live preview updates as you
   select.
 - Generate two matching documents per run:
-  - **Student copy**: a numbered grid of the selected words, nothing else.
+  - **Student copy**: a grid of the selected words, nothing else - no
+    numbers or category markings.
   - **Teacher copy**: the same grid plus the testing instructions, a
-    Results Summary table (mistakes/speed per category), and a small
+    Results Summary table (mistakes/speed per category), optional
+    Letters/Nekudot "by heart" recitation checklists, and a small
     reference number next to every word showing which category it belongs
     to. All words in the same category share one number (e.g. every word
     from category 3 is marked "3") - it's a shared category tag, not a
-    per-word ID. This reference number only appears on the teacher copy.
-- Every word also gets a plain sequential number (1, 2, 3, ...) that runs
-  across the whole sheet, on both copies, so the teacher and student can
-  follow along together.
+    per-word ID. This reference number, and everything else listed above
+    it in this bullet, only appears on the teacher copy.
+- Every word in a document renders at the same font size, regardless of
+  word length.
+- Each category can optionally repeat its words a chosen number of times
+  (e.g. test the Alef Bet 3x), and can be limited to a chosen number of
+  words - both configurable per category in the picker.
 - Each format is available as a PDF (nikud rendered via an embedded Hebrew
   font, so it looks the same everywhere) or a Word document (editable, uses
   the system's "David" font for Hebrew text).
 - Words per row (2-8) and page orientation (portrait/landscape) are both
-  adjustable, to help fit a longer assessment onto one page.
+  adjustable, to help fit a longer assessment onto one page. The live
+  preview shows dashed page-break markers and a running page count so you
+  can see how many printed pages a selection will take before generating it.
+
+## Reading Progress tracking (server app only)
+
+**This feature only runs in the `server/` app (`npm start`) - it is NOT part
+of the live site or the standalone file**, since it needs a real backend
+(teacher accounts + a database) that a static GitHub Pages file can't
+provide. If you only ever open the live site or the standalone HTML file,
+you will not see this feature at all.
+
+When running `server/`, teachers can sign up/log in (`public/progress.html`)
+and log reading-skill assessments for students against a fixed skill
+taxonomy (`server/lib/skills.js`: Letters, Phonemic Awareness, Vowels,
+Vowel-Letter Blending, Exception Rules, Vowel-Sh'va), recording mastery
+level, fluency timing, and optional mistake-pattern notes. A whole-school or
+single-class report (`public/progress-report.html`) shows each student's
+latest result per skill ("General" view) or their full history ("Detailed"
+view), with timing compared against the class/school average for that skill.
+Data lives in a local SQLite file at `data/progress.sqlite` (gitignored - not
+backed up anywhere unless you back up that file yourself).
 
 ## Sign-in, your logo, and a custom word bank
 
@@ -122,9 +154,16 @@ npm run build-standalone
   - `docxBuilder.js` - builds the Word document natively with the `docx`
     library (RTL tables/paragraphs, same content structure).
   - `instructions.js` - the verbatim teacher testing instructions.
-- `server/` - the Express app: `routes/` exposes `GET /api/categories`,
-  `POST /api/preview` (returns HTML), `POST /api/generate` (returns the
-  file); `public/` is its static frontend.
+  - `recitation.js` - Hebrew-alphabetical letter order and teaching-order
+    nekudot list, used by the optional "by heart" recitation sections.
+- `server/` - the Express app: `routes/categories.js` + `routes/generate.js`
+  expose `GET /api/categories`, `POST /api/preview` (returns HTML), and
+  `POST /api/generate` (returns the file) - these three mirror what the
+  standalone file does client-side. `routes/auth.js` + `routes/progress.js`
+  + `lib/db.js` (SQLite via `better-sqlite3`) + `lib/skills.js` are the
+  Reading Progress backend (see above) - these have no standalone/client-side
+  equivalent, since they need a real server. `public/` is the static
+  frontend for all of the above.
 - `standalone/` - the single-file browser app.
   - `src/` - its UI chrome (`styles.css`, `app.js`, `shell.html`) - the
     category picker (grouped by word-bank section), live preview, and the
